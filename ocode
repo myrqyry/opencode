@@ -2,5 +2,14 @@
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Keep the custom build separate from the user's stable OpenCode installation.
+# Project-local .opencode directories remain shared intentionally; global config,
+# plugins, auth/data, state, cache, logs, and temporary files use the ocode namespace.
 export OPENCODE_SCRIPT_NAME=ocode
+export OPENCODE_APP_NAME=ocode
+
+# Do not inherit explicit global config/database routing intended for stock OpenCode.
+unset OPENCODE_CONFIG OPENCODE_CONFIG_CONTENT OPENCODE_CONFIG_DIR OPENCODE_DB
+
 exec bun run --cwd "$repo_dir/packages/opencode" --conditions=browser src/index.ts "$@"
