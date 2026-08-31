@@ -32,7 +32,7 @@ export const directories = Effect.fn("ConfigPaths.directories")(function* (direc
         })
       : []),
     ...(yield* afs.up({
-      targets: [".opencode"],
+      targets: [`.${Global.AppName}`],
       start: Global.Path.home,
       stop: Global.Path.home,
     })),
