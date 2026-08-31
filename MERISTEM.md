@@ -15,6 +15,19 @@ This fork is intentionally a thin customization of upstream OpenCode. The goal i
 - Prefer existing deterministic mechanisms, repository conventions, specialists, scripts, and test harnesses before inventing new machinery.
 - Do not reduce an established goal merely because implementation becomes difficult. Prefer partial verified progress over false completion.
 
+## Ocode profile isolation
+
+`ocode` is intentionally a separate working environment from the stock `opencode` installation, not merely a second command name.
+
+- The launcher sets `OPENCODE_APP_NAME=ocode`.
+- Global XDG-backed config, data, state, cache, logs, repos, and temporary files therefore use the `ocode` namespace instead of `opencode`.
+- The legacy home-level config directory is `~/.ocode` for `ocode`; stock OpenCode continues to use `~/.opencode`.
+- Explicit `OPENCODE_CONFIG`, `OPENCODE_CONFIG_CONTENT`, `OPENCODE_CONFIG_DIR`, and `OPENCODE_DB` routing inherited by the launcher is cleared so stock settings do not silently bleed into the custom environment.
+- Project-local `.opencode` directories remain shared intentionally because they describe the project rather than the global client. This also preserves project-level agents, commands, skills, and plugins.
+- Shared external skill locations may remain available. Global `opencode`-specific skills/plugins should be migrated selectively rather than copied wholesale.
+
+The isolation boundary exists to prevent plugins, MCP/config hooks, permissions, formatters/LSP settings, databases, and other automatic global behavior from one installation from destabilizing the other.
+
 ## Review defaults
 
 When reviewing or debugging code:
