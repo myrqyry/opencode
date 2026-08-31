@@ -4,11 +4,12 @@ import { FileIcon } from "@opencode-ai/ui/file-icon"
 import { List } from "@opencode-ai/ui/list"
 import type { ListRef } from "@opencode-ai/ui/list"
 import { getDirectory, getFilename } from "@opencode-ai/core/util/path"
+import fuzzysort from "fuzzysort"
 import { createMemo, createResource, createSignal } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { ServerConnection } from "@/context/server"
 import { useGlobal } from "@/context/global"
-import { cleanPickerInput, createDirectorySearch, displayPickerPath } from "./directory-picker-domain"
+import { cleanPickerInput, createDirectorySearch, displayPickerPath, joinPickerPath } from "./directory-picker-domain"
 import type { Path } from "@opencode-ai/sdk/v2/client"
 
 interface DialogSelectDirectoryProps {
@@ -114,13 +115,41 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
       })
   })
 
+  const workspaceListings = new Map<string, Promise<string[]>>()
+  const workspaceRoots = createMemo(() => {
+    const roots = [home(), ...serverCtx.projects.list().map((project) => getDirectory(project.worktree))]
+    return Array.from(new Set(roots.map((root) => root.replace(/[\\/]+$/, "")).filter(Boolean)))
+  })
+
+  const listWorkspaceRoot = (root: string) => {
+    const existing = workspaceListings.get(root)
+    if (existing) return existing
+    const request = sdk.api.file
+      .list({ location: { directory: root } })
+      .then((result) =>
+        result.data
+          .filter((entry) => entry.type === "directory")
+          .map((entry) => joinPickerPath(root, entry.path)),
+      )
+      .catch(() => [])
+    workspaceListings.set(root, request)
+    return request
+  }
+
+  const workspaceRows = async (value: string) => {
+    if (!value) return []
+    const folders = Array.from(new Set((await Promise.all(workspaceRoots().map(listWorkspaceRoot))).flat()))
+    const rows = folders.map((absolute) => toRow(absolute, home(), "folders"))
+    return fuzzysort.go(value, rows, { key: "search", limit: 50 }).map((result) => result.obj)
+  }
+
   const items = async (value: string) => {
-    const results = await directories(value)
+    const [results, workspace] = await Promise.all([directories(value), workspaceRows(value)])
     const directoryRows = results.map((absolute) => toRow(absolute, home(), "folders"))
     // Cap the idle list only. Once a query narrows the results, every project stays searchable.
     const recent = recentProjects()
     const visible = value ? recent : recent.slice(0, RECENT_PROJECT_LIMIT)
-    return uniqueRows([...visible, ...directoryRows])
+    return uniqueRows([...visible, ...workspace, ...directoryRows])
   }
 
   function resolve(absolute: string) {
