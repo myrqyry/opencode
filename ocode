@@ -38,4 +38,58 @@ if [[ -z "$bun_bin" ]]; then
   exit 127
 fi
 
+# Source checkouts do not contain the generated embedded web bundle. Upstream's
+# `web` command silently proxies app.opencode.ai in that case, which hides local
+# packages/app changes. For ocode, make `web` run the local API and local Vite UI.
+# Set OCODE_WEB_UPSTREAM=1 to opt back into the upstream/proxied command.
+if [[ "${1:-}" == "web" && "${OCODE_WEB_UPSTREAM:-0}" != "1" ]]; then
+  shift
+  if [[ $# -ne 0 ]]; then
+    echo "ocode web: network flags are not supported by the local dev launcher yet." >&2
+    echo "Use OCODE_SERVER_HOST and OCODE_SERVER_PORT instead, or set OCODE_WEB_UPSTREAM=1." >&2
+    exit 2
+  fi
+
+  backend_host="${OCODE_SERVER_HOST:-127.0.0.1}"
+  backend_port="${OCODE_SERVER_PORT:-}"
+  if [[ -z "$backend_port" ]]; then
+    backend_port="$($bun_bin -e '
+      import { createServer } from "node:net"
+      const server = createServer()
+      server.listen(0, "127.0.0.1", () => {
+        const address = server.address()
+        if (!address || typeof address === "string") process.exit(1)
+        console.log(address.port)
+        server.close()
+      })
+    ')"
+  fi
+
+  backend_pid=""
+  cleanup() {
+    local status=$?
+    trap - EXIT INT TERM HUP
+    if [[ -n "$backend_pid" ]] && kill -0 "$backend_pid" 2>/dev/null; then
+      kill "$backend_pid" 2>/dev/null || true
+      wait "$backend_pid" 2>/dev/null || true
+    fi
+    exit "$status"
+  }
+  trap cleanup EXIT INT TERM HUP
+
+  "$bun_bin" run --cwd "$repo_dir/packages/opencode" --conditions=browser src/index.ts \
+    serve --hostname "$backend_host" --port "$backend_port" &
+  backend_pid=$!
+
+  export VITE_OPENCODE_SERVER_HOST="$backend_host"
+  export VITE_OPENCODE_SERVER_PORT="$backend_port"
+
+  echo "ocode: local API      http://$backend_host:$backend_port"
+  echo "ocode: local web UI   Vite will print and open its URL below"
+  echo
+
+  "$bun_bin" run --cwd "$repo_dir/packages/app" dev -- --open
+  exit $?
+fi
+
 exec "$bun_bin" run --cwd "$repo_dir/packages/opencode" --conditions=browser src/index.ts "$@"
