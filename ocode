@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve this launcher through symlinks so `~/.local/bin/ocode` still finds the
+# source checkout instead of treating ~/.local/bin as the repository root.
+script_path="${BASH_SOURCE[0]}"
+while [[ -L "$script_path" ]]; do
+  script_dir="$(cd -P "$(dirname "$script_path")" && pwd)"
+  target="$(readlink "$script_path")"
+  if [[ "$target" == /* ]]; then
+    script_path="$target"
+  else
+    script_path="$script_dir/$target"
+  fi
+done
+repo_dir="$(cd -P "$(dirname "$script_path")" && pwd)"
 
 # Keep the custom build separate from the user's stable OpenCode installation.
 # Project-local .opencode directories remain shared intentionally; global config,
@@ -12,4 +24,18 @@ export OPENCODE_APP_NAME=ocode
 # Do not inherit explicit global config/database routing intended for stock OpenCode.
 unset OPENCODE_CONFIG OPENCODE_CONFIG_CONTENT OPENCODE_CONFIG_DIR OPENCODE_DB
 
-exec bun run --cwd "$repo_dir/packages/opencode" --conditions=browser src/index.ts "$@"
+# Interactive shells do not always put Bun on PATH even when BUN_INSTALL is set.
+# Prefer PATH, then the configured Bun install, then Bun's standard user install.
+bun_bin="$(command -v bun 2>/dev/null || true)"
+if [[ -z "$bun_bin" && -n "${BUN_INSTALL:-}" && -x "$BUN_INSTALL/bin/bun" ]]; then
+  bun_bin="$BUN_INSTALL/bin/bun"
+fi
+if [[ -z "$bun_bin" && -x "$HOME/.bun/bin/bun" ]]; then
+  bun_bin="$HOME/.bun/bin/bun"
+fi
+if [[ -z "$bun_bin" ]]; then
+  echo "ocode: Bun was not found. Install Bun or add it to PATH." >&2
+  exit 127
+fi
+
+exec "$bun_bin" run --cwd "$repo_dir/packages/opencode" --conditions=browser src/index.ts "$@"
