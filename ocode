@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export OPENCODE_SCRIPT_NAME=ocode
+exec bun run --cwd "$repo_dir/packages/opencode" --conditions=browser src/index.ts "$@"
