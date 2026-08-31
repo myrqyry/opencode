@@ -4,10 +4,12 @@ import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { ProjectAvatar } from "@opencode-ai/ui/v2/project-avatar-v2"
+import { useDirectoryPicker } from "@/components/directory-picker"
 import { getProjectAvatarVariant, type LocalProject, useLayout } from "@/context/layout"
 import { useServer } from "@/context/server"
 import { useServerSync } from "@/context/server-sync"
 import { useTabs } from "@/context/tabs"
+import { createHomeController } from "@/pages/home/home-controller"
 import { displayName, getProjectAvatarSource, sortedRootSessions } from "@/pages/layout/helpers"
 
 const collapsedWidth = 52
@@ -16,13 +18,34 @@ const maximumWidth = 420
 
 export function ProjectSessionSidebar() {
   const layout = useLayout()
+  const server = useServer()
   const navigate = useNavigate()
   const dialog = useDialog()
+  const pickDirectory = useDirectoryPicker()
+  const home = createHomeController()
 
   const width = createMemo(() => {
     if (!layout.sidebar.opened()) return collapsedWidth
     return Math.min(maximumWidth, Math.max(minimumWidth, layout.sidebar.width()))
   })
+
+  const openProject = () => {
+    const conn = server.current
+    if (!conn) return
+
+    pickDirectory({
+      server: conn,
+      title: "Open project",
+      multiple: true,
+      onSelect: (result) => {
+        if (!result) return
+        const directories = Array.isArray(result) ? result : [result]
+        if (directories.length === 0) return
+        home.project.add(conn, directories)
+        navigate("/")
+      },
+    })
+  }
 
   const openSettings = () => {
     void import("@/components/settings-v2").then((module) => {
@@ -52,6 +75,16 @@ export function ProjectSessionSidebar() {
             >
               Projects
             </button>
+            <IconButtonV2
+              type="button"
+              variant="ghost-muted"
+              size="large"
+              class="!w-9 shrink-0"
+              icon={<IconV2 name="plus" />}
+              onClick={openProject}
+              aria-label="Open project"
+              title="Open project"
+            />
           </Show>
           <IconButtonV2
             type="button"
@@ -73,10 +106,22 @@ export function ProjectSessionSidebar() {
         <div
           class="shrink-0 border-t border-v2-border-border-base p-1.5"
           classList={{
-            "flex justify-center": !layout.sidebar.opened(),
+            "flex flex-col items-center gap-1": !layout.sidebar.opened(),
             "flex items-center justify-end": layout.sidebar.opened(),
           }}
         >
+          <Show when={!layout.sidebar.opened()}>
+            <IconButtonV2
+              type="button"
+              variant="ghost-muted"
+              size="large"
+              class="!w-9 shrink-0"
+              icon={<IconV2 name="plus" />}
+              onClick={openProject}
+              aria-label="Open project"
+              title="Open project"
+            />
+          </Show>
           <IconButtonV2
             type="button"
             variant="ghost-muted"
