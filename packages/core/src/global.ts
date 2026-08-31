@@ -7,7 +7,9 @@ import { Flock } from "./util/flock"
 import { Flag } from "./flag/flag"
 import { makeGlobalNode } from "./effect/app-node"
 
-const app = "opencode"
+const app = process.env.OPENCODE_APP_NAME?.trim() || "opencode"
+export const AppName = app
+
 const data = path.join(xdgData!, app)
 const cache = path.join(xdgCache!, app)
 const config = path.join(xdgConfig!, app)
