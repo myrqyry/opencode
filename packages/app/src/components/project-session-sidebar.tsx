@@ -101,7 +101,10 @@ function ProjectSection(props: { project: LocalProject; expanded: boolean }) {
   const store = createMemo(() => serverSync().child(props.project.worktree, { bootstrap: false })[0])
   const sessions = createMemo(() => sortedRootSessions(store(), Date.now()).slice(0, 24))
   const route = layout.route
-  const activeSession = createMemo(() => (route().type === "session" ? route().sessionId : undefined))
+  const activeSession = createMemo(() => {
+    const current = route()
+    return current.type === "session" ? current.sessionId : undefined
+  })
   const activeProject = createMemo(() => {
     const id = activeSession()
     return !!id && (store().session ?? []).some((session) => session.id === id)
