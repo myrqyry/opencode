@@ -31,10 +31,11 @@ import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 
 const args = hideBin(process.argv)
+const scriptName = process.env.OPENCODE_SCRIPT_NAME || "opencode"
 
 function show(out: string) {
   const text = out.trimStart()
-  if (!text.startsWith("opencode ")) {
+  if (!text.startsWith(scriptName + " ")) {
     process.stderr.write(UI.logo() + EOL + EOL)
     process.stderr.write(text + EOL)
     return
@@ -44,7 +45,7 @@ function show(out: string) {
 
 const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
-  .scriptName("opencode")
+  .scriptName(scriptName)
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -107,7 +108,6 @@ const cli = yargs(args)
       msg?.startsWith("Not enough non-option arguments") ||
       msg?.startsWith("Invalid values:")
     ) {
-      if (err) throw err
       cli.showHelp(show)
     }
     if (err) throw err
