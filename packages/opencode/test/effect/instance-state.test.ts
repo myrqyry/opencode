@@ -390,3 +390,33 @@ it.live("InstanceState survives deferred resume outside ALS when InstanceRef is 
     }).pipe(Effect.provide(Test.layer))
   }),
 )
+
+it.live("InstanceState cold lookup survives caller interruption", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+    const started = yield* Deferred.make<void>()
+    const release = yield* Deferred.make<void>()
+    let n = 0
+
+    const state = yield* InstanceState.make(() =>
+      Effect.gen(function* () {
+        n += 1
+        yield* Deferred.succeed(started, undefined)
+        yield* Deferred.await(release)
+        return { n }
+      }),
+    )
+
+    const first = yield* access(state, dir).pipe(Effect.forkScoped)
+    yield* Deferred.await(started)
+
+    const interrupt = yield* Fiber.interrupt(first).pipe(Effect.forkScoped)
+    yield* Effect.sleep(Duration.millis(1))
+    yield* Deferred.succeed(release, undefined)
+    yield* Fiber.await(interrupt)
+
+    const value = yield* access(state, dir)
+    expect(value.n).toBe(1)
+    expect(n).toBe(1)
+  }),
+)

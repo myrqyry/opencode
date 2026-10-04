@@ -1,5 +1,7 @@
 export type {
   DesktopTheme,
+  ProjectAccentSlot,
+  ProjectAccentVariants,
   ThemePaletteColors,
   ThemeSeedColors,
   ThemeVariant,
@@ -31,6 +33,13 @@ export {
   withAlpha,
 } from "./color"
 
+export { PROJECT_ACCENT_SLOTS } from "./types"
+export {
+  generatedProjectAccents,
+  projectAccentColor,
+  projectAccentEntries,
+  type ProjectAccent,
+} from "./project-accents"
 export { resolveThemeVariant, resolveTheme, themeToCss } from "./resolve"
 export { resolveThemeVariantV2, resolveThemeV2, themeV2ToCss, generateV2Primitives } from "./v2/resolve"
 export { applyTheme, loadThemeFromUrl, getActiveTheme, removeTheme, setColorScheme } from "./loader"

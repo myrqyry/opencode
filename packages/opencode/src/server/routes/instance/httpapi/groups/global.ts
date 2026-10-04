@@ -12,6 +12,8 @@ import { described } from "./metadata"
 const GlobalHealth = Schema.Struct({
   healthy: Schema.Literal(true),
   version: Schema.String,
+  pid: Schema.Int,
+  restartable: Schema.Boolean,
 })
 
 const SyncEventSchemas = EventManifest.Latest.values()
@@ -65,12 +67,18 @@ const GlobalUpgradeResult = Schema.Union([
   }),
 ])
 
+const GlobalRestartResult = Schema.Struct({
+  restarting: Schema.Literal(true),
+  pid: Schema.Int,
+})
+
 export const GlobalPaths = {
   health: "/global/health",
   event: "/global/event",
   config: "/global/config",
   dispose: "/global/dispose",
   upgrade: "/global/upgrade",
+  restart: "/global/restart",
 } as const
 
 export const GlobalApi = HttpApi.make("global").add(
@@ -132,6 +140,16 @@ export const GlobalApi = HttpApi.make("global").add(
           identifier: "global.upgrade",
           summary: "Upgrade opencode",
           description: "Upgrade opencode to the specified version.",
+        }),
+      ),
+      HttpApiEndpoint.post("restart", GlobalPaths.restart, {
+        success: described(GlobalRestartResult, "Restart requested"),
+        error: HttpApiError.Forbidden,
+      }).annotateMerge(
+        OpenApi.annotations({
+          identifier: "global.restart",
+          summary: "Restart opencode",
+          description: "Request a supervised restart when the server was launched with restart support enabled.",
         }),
       ),
     )

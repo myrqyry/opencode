@@ -34,11 +34,12 @@ type Row = typeof ProjectTable.$inferSelect
 
 export function fromRow(row: Row): Info {
   const icon =
-    row.icon_url || row.icon_url_override || row.icon_color
+    row.icon_url || row.icon_url_override || row.icon_color || row.icon_shape
       ? {
           url: row.icon_url ?? undefined,
           override: row.icon_url_override ?? undefined,
           color: row.icon_color ?? undefined,
+          shape: row.icon_shape ? Schema.decodeUnknownSync(Project.IconShape)(row.icon_shape) : undefined,
         }
       : undefined
   return {
@@ -264,6 +265,7 @@ const layer = Layer.effect(
           icon_url: result.icon?.url,
           icon_url_override: result.icon?.override,
           icon_color: result.icon?.color,
+          icon_shape: result.icon?.shape,
           time_created: result.time.created,
           time_updated: result.time.updated,
           time_initialized: result.time.initialized,
@@ -279,6 +281,7 @@ const layer = Layer.effect(
             icon_url: result.icon?.url,
             icon_url_override: result.icon?.override,
             icon_color: result.icon?.color,
+            icon_shape: result.icon?.shape,
             time_updated: result.time.updated,
             time_initialized: result.time.initialized,
             sandboxes: result.sandboxes.map((sandbox) => AbsolutePath.make(sandbox)),
@@ -350,6 +353,7 @@ const layer = Layer.effect(
           icon_url: input.icon?.url,
           icon_url_override: input.icon?.override,
           icon_color: input.icon?.color,
+          icon_shape: input.icon?.shape,
           commands: input.commands,
           time_updated: Date.now(),
         })

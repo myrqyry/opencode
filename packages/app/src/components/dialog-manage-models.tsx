@@ -11,7 +11,8 @@ import { TextInputV2 } from "@opencode-ai/ui/v2/text-input-v2"
 import { Switch as SwitchV2 } from "@opencode-ai/ui/v2/switch-v2"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { useFilteredList } from "@opencode-ai/ui/hooks"
-import { For, Show, type Component } from "solid-js"
+import { createSignal, For, Show, type Component } from "solid-js"
+import { createStore } from "solid-js/store"
 import { useLocal } from "@/context/local"
 import { popularProviders } from "@/hooks/use-providers"
 import { useLanguage } from "@/context/language"
@@ -20,6 +21,8 @@ import { DialogConnectProvider } from "./dialog-connect-provider"
 import { decode64 } from "@/utils/base64"
 import { SettingsListV2 } from "./settings-v2/parts/list"
 import { SettingsRowV2 } from "./settings-v2/parts/row"
+import { useServerSDK } from "@/context/server-sdk"
+import { Persist, persisted } from "@/utils/persist"
 import "./settings-v2/settings-v2.css"
 
 type ModelItem = ReturnType<ReturnType<typeof useLocal>["model"]["list"]>[number]
@@ -120,6 +123,12 @@ export const DialogManageModelsV2: Component = () => {
   const local = useLocal()
   const language = useLanguage()
   const dialog = useDialog()
+  const serverSdk = useServerSDK()
+  const [providerState, setProviderState] = persisted(
+    Persist.serverGlobal(serverSdk().scope, "settings-v2.models.providers"),
+    createStore({ collapsed: {} as Record<string, boolean> }),
+  )
+  const [enabledOnly, setEnabledOnly] = createSignal(false)
   const directory = () => decode64(local.slug())
 
   const handleConnectProvider = () => {
@@ -128,6 +137,8 @@ export const DialogManageModelsV2: Component = () => {
   const providerList = (providerID: string) => local.model.list().filter((x) => x.provider.id === providerID)
   const providerVisible = (providerID: string) =>
     providerList(providerID).every((x) => local.model.visible({ modelID: x.id, providerID: x.provider.id }))
+  const providerVisibleCount = (providerID: string) =>
+    providerList(providerID).filter((x) => local.model.visible({ modelID: x.id, providerID: x.provider.id })).length
   const setProviderVisibility = (providerID: string, checked: boolean) => {
     providerList(providerID).forEach((x) => {
       local.model.setVisibility({ modelID: x.id, providerID: x.provider.id }, checked)
@@ -137,7 +148,11 @@ export const DialogManageModelsV2: Component = () => {
     local.model.setVisibility({ modelID: item.id, providerID: item.provider.id }, checked)
   }
   const list = useFilteredList<ModelItem>({
-    items: () => local.model.list(),
+    items: () =>
+      local
+        .model
+        .list()
+        .filter((item) => !enabledOnly() || local.model.visible({ modelID: item.id, providerID: item.provider.id })),
     key: (x) => `${x.provider.id}:${x.id}`,
     filterKeys: ["provider.name", "name", "id"],
     sortBy: (a, b) => a.name.localeCompare(b.name),
@@ -165,8 +180,8 @@ export const DialogManageModelsV2: Component = () => {
         </ButtonV2>
       </DialogHeader>
       <DialogBody class="flex min-h-0 flex-1 flex-col">
-        <div class="px-4 pt-px pb-3">
-          <div class="relative">
+        <div class="flex items-center gap-2 px-4 pt-px pb-3">
+          <div class="relative min-w-0 flex-1">
             <TextInputV2
               type="search"
               appearance="base"
@@ -193,6 +208,14 @@ export const DialogManageModelsV2: Component = () => {
               />
             </Show>
           </div>
+          <ButtonV2
+            type="button"
+            size="small"
+            variant={enabledOnly() ? "neutral" : "ghost-muted"}
+            onClick={() => setEnabledOnly((value) => !value)}
+          >
+            Enabled only
+          </ButtonV2>
         </div>
         <div data-slot="manage-models-scroll" class="relative min-h-0 flex-1">
           <div class="settings-v2-panel settings-v2-models h-full px-4 pt-4 pb-4">
@@ -217,16 +240,37 @@ export const DialogManageModelsV2: Component = () => {
                 }
               >
                 <For each={list.grouped.latest}>
-                  {(group) => (
-                    <div class="settings-v2-section" data-component="settings-models-provider">
-                      <div class="settings-v2-models-group-header justify-between">
-                        <div class="flex min-w-0 items-center gap-2">
-                          <ProviderIcon id={group.category} width={16} height={16} class="ml-4 shrink-0" />
-                          <h3 class="settings-v2-section-title">{group.items[0].provider.name}</h3>
-                        </div>
-                        <div>
+                  {(group) => {
+                    const searching = () => list.filter().length > 0
+                    const expanded = () => searching() || !providerState.collapsed[group.category]
+                    const total = () => providerList(group.category).length
+                    const visible = () => providerVisibleCount(group.category)
+
+                    return (
+                      <div
+                        class="settings-v2-section"
+                        data-component="settings-models-provider"
+                        data-expanded={expanded() ? "" : undefined}
+                      >
+                        <div class="settings-v2-models-group-header justify-between">
+                          <button
+                            type="button"
+                            class="settings-v2-models-group-trigger min-w-0 flex-1"
+                            aria-expanded={expanded()}
+                            disabled={searching()}
+                            onClick={() => setProviderState("collapsed", group.category, expanded())}
+                          >
+                            <span class="settings-v2-models-group-chevron">
+                              <IconV2 name={expanded() ? "chevron-down" : "chevron-right"} size="small" />
+                            </span>
+                            <ProviderIcon id={group.category} width={16} height={16} class="shrink-0" />
+                            <span class="settings-v2-section-title min-w-0 truncate">{group.items[0].provider.name}</span>
+                            <span class="shrink-0 text-[11px] text-v2-text-text-faint [font-weight:440]">
+                              {visible()} / {total()}
+                            </span>
+                          </button>
                           <SwitchV2
-                            class="mr-6"
+                            class="mr-4"
                             checked={providerVisible(group.category)}
                             onChange={(checked) => setProviderVisibility(group.category, checked)}
                             hideLabel
@@ -234,26 +278,28 @@ export const DialogManageModelsV2: Component = () => {
                             {group.items[0].provider.name}
                           </SwitchV2>
                         </div>
+                        <Show when={expanded()}>
+                          <SettingsListV2>
+                            <For each={group.items}>
+                              {(item) => (
+                                <SettingsRowV2 title={item.name} description="">
+                                  <div>
+                                    <SwitchV2
+                                      checked={local.model.visible({ modelID: item.id, providerID: item.provider.id })}
+                                      onChange={(checked) => setModelVisibility(item, checked)}
+                                      hideLabel
+                                    >
+                                      {item.name}
+                                    </SwitchV2>
+                                  </div>
+                                </SettingsRowV2>
+                              )}
+                            </For>
+                          </SettingsListV2>
+                        </Show>
                       </div>
-                      <SettingsListV2>
-                        <For each={group.items}>
-                          {(item) => (
-                            <SettingsRowV2 title={item.name} description="">
-                              <div>
-                                <SwitchV2
-                                  checked={local.model.visible({ modelID: item.id, providerID: item.provider.id })}
-                                  onChange={(checked) => setModelVisibility(item, checked)}
-                                  hideLabel
-                                >
-                                  {item.name}
-                                </SwitchV2>
-                              </div>
-                            </SettingsRowV2>
-                          )}
-                        </For>
-                      </SettingsListV2>
-                    </div>
-                  )}
+                    )
+                  }}
                 </For>
               </Show>
             </Show>

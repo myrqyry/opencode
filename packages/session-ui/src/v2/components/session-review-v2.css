@@ -34,7 +34,8 @@
   background: var(--v2-background-bg-base);
 }
 
-[data-component="session-review-v2-sidebar-root"] [data-slot="session-review-v2-sidebar"][aria-hidden="true"] {
+[data-component="session-review-v2-sidebar-root"] [data-slot="session-review-v2-sidebar"][aria-hidden="true"],
+[data-component="session-review-v2-sidebar-root"][data-fill] [data-slot="session-review-v2-sidebar"] {
   border-inline-end-width: 0;
 }
 

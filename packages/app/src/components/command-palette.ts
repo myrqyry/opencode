@@ -10,6 +10,7 @@ import { useLanguage } from "@/context/language"
 import { useLayout, type LocalProject } from "@/context/layout"
 import { ServerConnection } from "@/context/server"
 import { useServerSDK } from "@/context/server-sdk"
+import { useSettings } from "@/context/settings"
 import { useTabs } from "@/context/tabs"
 import { displayName, projectForSession } from "@/pages/layout/helpers"
 import { createSessionTabs } from "@/pages/session/helpers"
@@ -65,7 +66,9 @@ export function createCommandPaletteFileEntry(path: string, category: string): C
 export function createCommandPaletteFileOpener(onOpenFile?: (path: string) => void) {
   const file = useFile()
   const layout = useLayout()
-  const { tabs, view } = useSessionLayout()
+  const settings = useSettings()
+  const { tabs: sessionTabs, view, workspaceKey } = useSessionLayout()
+  const tabs = () => (settings.general.newLayoutDesigns() ? layout.tabs(workspaceKey) : sessionTabs())
 
   return (path: string) => {
     const value = file.tab(path)

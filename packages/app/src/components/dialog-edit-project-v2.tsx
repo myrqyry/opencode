@@ -2,20 +2,189 @@ import { ButtonV2 } from "@opencode-ai/ui/v2/button-v2"
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from "@opencode-ai/ui/v2/dialog-v2"
 import { DividerV2 } from "@opencode-ai/ui/v2/divider-v2"
 import { Field } from "@opencode-ai/ui/v2/field-v2"
-import { Icon } from "@opencode-ai/ui/v2/icon"
-import { ProjectAvatar, PROJECT_AVATAR_VARIANTS } from "@opencode-ai/ui/v2/project-avatar-v2"
+import { Icon, iconDataUri, type IconName } from "@opencode-ai/ui/v2/icon"
+import {
+  ProjectAvatar,
+  PROJECT_AVATAR_SHAPES,
+  type ProjectAvatarShape,
+} from "@opencode-ai/ui/v2/project-avatar-v2"
 import { TextareaV2 } from "@opencode-ai/ui/v2/textarea-v2"
 import { TextInputV2 } from "@opencode-ai/ui/v2/text-input-v2"
-import { For, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
-import { getProjectAvatarVariant, type LocalProject } from "@/context/layout"
+import { type LocalProject } from "@/context/layout"
+import { useProjectColor } from "@/utils/project-color"
 import { ServerConnection } from "@/context/server"
 import { getProjectAvatarSource } from "@/pages/layout/helpers"
 import { createEditProjectModel } from "./edit-project"
 
+const EMOJI_CHOICES = [
+  "🌱", "✨", "⭐", "🔥", "💡", "🧠", "🤖", "🎨", "🎵", "🎧", "🎛️", "🎮",
+  "🕹️", "📻", "📚", "📝", "🧪", "🔬", "🔭", "🔧", "⚙️", "🧩", "🪄", "🛰️",
+  "🚀", "💻", "🖥️", "📱", "💾", "📦", "🗂️", "🌙", "☀️", "☁️", "🌊", "🍄",
+  "🌿", "🌸", "🍒", "🐈", "🐕", "🦊", "🐸", "🐙", "🦋", "👾", "❤️", "💜",
+] as const
+
+const SVG_ICON_CHOICES = [
+  ["folder", "Folder"],
+  ["branch", "Branch"],
+  ["workspace", "Workspace"],
+  ["workspace-new", "New workspace"],
+  ["workspace-isolated", "Isolated workspace"],
+  ["filetree", "Files"],
+  ["grid-plus", "Grid"],
+  ["monitor", "Monitor"],
+  ["status", "Server"],
+  ["edit", "Edit"],
+  ["review", "Review"],
+  ["outline-sliders", "Controls"],
+  ["outline-copy", "Copy"],
+  ["outline-share", "Share"],
+  ["magnifying-glass", "Search"],
+  ["settings-gear", "Settings"],
+  ["reset", "Reset"],
+  ["archive", "Archive"],
+  ["help", "Help"],
+  ["menu", "Menu"],
+  ["check", "Check"],
+  ["plus", "Plus"],
+  ["split", "Split"],
+  ["unified", "Unified"],
+] as const satisfies ReadonlyArray<readonly [IconName, string]>
+
+function escapeXml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;")
+}
+
+function emojiDataUri(value: string) {
+  const text = escapeXml(value)
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+    '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="42" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' +
+    text +
+    "</text></svg>"
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg)
+}
+
+function FullEmojiPicker(props: { onSelect: (emoji: string) => void }) {
+  let host: HTMLDivElement | undefined
+  let disposePicker: (() => void) | undefined
+  let cancelled = false
+
+  onMount(() => {
+    void (async () => {
+      const [, dataModule] = await Promise.all([
+        import("emoji-picker-element/picker"),
+        import("emoji-picker-element-data/en/emojibase/data.json"),
+      ])
+      if (cancelled || !host) return
+
+      const dataSource = URL.createObjectURL(
+        new Blob([JSON.stringify(dataModule.default)], { type: "application/json" }),
+      )
+      const picker = document.createElement("emoji-picker") as HTMLElement & { dataSource: string }
+      picker.dataSource = dataSource
+      picker.style.width = "100%"
+      picker.style.height = "320px"
+      picker.style.maxWidth = "100%"
+      picker.style.setProperty("--background", "var(--v2-background-bg-layer-01)")
+      picker.style.setProperty("--border-color", "var(--v2-border-border-muted)")
+      picker.style.setProperty("--border-radius", "12px")
+      picker.style.setProperty("--button-active-background", "var(--v2-overlay-simple-overlay-pressed)")
+      picker.style.setProperty("--button-hover-background", "var(--v2-overlay-simple-overlay-hover)")
+      picker.style.setProperty("--indicator-color", "var(--v2-background-bg-accent)")
+      picker.style.setProperty("--input-border-color", "var(--v2-border-border-muted)")
+      picker.style.setProperty("--input-font-color", "var(--v2-text-text-base)")
+      picker.style.setProperty("--input-placeholder-color", "var(--v2-text-text-faint)")
+      picker.style.setProperty("--outline-color", "var(--v2-border-border-focus)")
+      picker.style.setProperty("--category-font-color", "var(--v2-text-text-muted)")
+      picker.style.setProperty("--emoji-size", "1.25rem")
+      picker.style.setProperty("--emoji-padding", "0.375rem")
+      picker.style.setProperty("--input-border-radius", "0.625rem")
+      picker.style.setProperty("--skintone-border-radius", "0.75rem")
+
+      const syncTheme = () => {
+        const dark = document.documentElement.dataset.colorScheme === "dark"
+        picker.classList.toggle("dark", dark)
+        picker.classList.toggle("light", !dark)
+      }
+      const onEmoji = (event: Event) => {
+        const emoji = (event as CustomEvent<{ unicode?: string }>).detail?.unicode
+        if (emoji) props.onSelect(emoji)
+      }
+      const observer = new MutationObserver(syncTheme)
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-color-scheme"] })
+      picker.addEventListener("emoji-click", onEmoji)
+      host.replaceChildren(picker)
+      syncTheme()
+
+      disposePicker = () => {
+        observer.disconnect()
+        picker.removeEventListener("emoji-click", onEmoji)
+        picker.remove()
+        URL.revokeObjectURL(dataSource)
+      }
+    })()
+  })
+
+  onCleanup(() => {
+    cancelled = true
+    disposePicker?.()
+  })
+
+  return <div ref={(element) => (host = element)} class="min-w-0 overflow-hidden rounded-[12px]" />
+}
+
+type IconMode = "letter" | "emoji" | "svg" | "upload"
+
+const SHAPE_LABELS: Record<ProjectAvatarShape, string> = {
+  circle: "Circle",
+  squircle: "Squircle",
+  rounded: "Rounded",
+  arch: "Arch",
+  leaf: "Leaf",
+  gem: "Gem",
+}
+
 export function DialogEditProjectV2(props: { project: LocalProject; server: ServerConnection.Any }) {
   const language = useLanguage()
+  const projectColor = useProjectColor()
   const model = createEditProjectModel(props)
+  const [iconMode, setIconMode] = createSignal<IconMode>(model.store.iconOverride ? "upload" : "letter")
+  const [customEmoji, setCustomEmoji] = createSignal("")
+  const resolvedColor = createMemo(() => projectColor.resolve(props.project, model.store.color) ?? "#5c5c5c")
+  const [hexColor, setHexColor] = createSignal<string>(resolvedColor())
+
+  createEffect(() => {
+    if (model.store.color && !projectColor.selected(model.store.color)) return
+    setHexColor(resolvedColor())
+  })
+
+  const chooseEmoji = (emoji: string) => {
+    model.setStore("iconOverride", emojiDataUri(emoji))
+    model.setStore("iconHover", false)
+    setIconMode("emoji")
+  }
+
+  const chooseSvg = (name: IconName) => {
+    model.setStore("iconOverride", iconDataUri(name))
+    model.setStore("iconHover", false)
+    setIconMode("svg")
+  }
+
+  const setProjectColor = (value: string) => {
+    const normalized = value.trim().toLowerCase()
+    setHexColor(normalized)
+    if (/^#[0-9a-f]{6}$/i.test(normalized)) model.setStore("color", normalized)
+  }
+
+  const tabClass =
+    "h-7 rounded-[5px] px-2 text-[12px] font-[500] transition-colors hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
 
   return (
     <Dialog fit>
@@ -24,7 +193,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
           <DialogTitle>{language.t("dialog.project.edit.title")}</DialogTitle>
         </DialogHeader>
         <DividerV2 />
-        <DialogBody class="flex max-h-[min(560px,calc(100vh-160px))] w-full flex-col gap-6 overflow-y-auto px-4 pt-4 pb-1">
+        <DialogBody class="flex max-h-[min(620px,calc(100vh-120px))] w-full flex-col gap-5 overflow-y-auto px-4 pt-4 pb-1">
           <Field>
             <Field.Label>{language.t("dialog.project.edit.name")}</Field.Label>
             <TextInputV2
@@ -37,24 +206,20 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
             />
           </Field>
 
-          <div class="flex w-full flex-col gap-2">
+          <div class="flex w-full flex-col gap-2.5">
             <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-v2-text-text-base">
               {language.t("dialog.project.edit.icon")}
             </div>
+
             <div class="flex items-center gap-3">
-              <button
-                type="button"
-                aria-label={language.t("dialog.project.edit.icon.alt")}
-                class="relative size-16 shrink-0 cursor-pointer overflow-hidden rounded-[6px] outline outline-1 outline-transparent transition-[background-color,outline-color] focus-visible:outline-v2-border-border-focus"
+              <div
+                class="relative flex size-16 shrink-0 items-center justify-center rounded-[18px] bg-v2-background-bg-layer-01 p-1.5 shadow-[var(--v2-elevation-raised)] outline outline-1 outline-v2-border-border-muted"
                 classList={{
                   "bg-v2-overlay-simple-overlay-hover outline-v2-border-border-focus": model.store.dragOver,
                 }}
-                onMouseEnter={() => model.setStore("iconHover", true)}
-                onMouseLeave={() => model.setStore("iconHover", false)}
                 onDrop={model.drop}
                 onDragOver={model.dragOver}
                 onDragLeave={model.dragLeave}
-                onClick={model.iconClick}
               >
                 <ProjectAvatar
                   fallback={model.store.name || model.defaultName()}
@@ -63,19 +228,12 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                     url: props.project.icon?.url,
                     override: model.store.iconOverride,
                   })}
-                  variant={getProjectAvatarVariant(model.store.color)}
-                  class="!size-16 [&_[data-slot=project-avatar-surface]]:!rounded-[6px] [&_[data-slot=project-avatar-surface]]:!text-[32px]"
+                  variant={resolvedColor()}
+                  shape={model.store.shape}
+                  class="!size-13 [&_[data-slot=project-avatar-surface]]:!text-[28px]"
                 />
-                <span
-                  class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[6px] bg-v2-background-bg-contrast/80 text-v2-icon-icon-contrast backdrop-blur-[2px] transition-opacity"
-                  classList={{
-                    "opacity-100": model.store.iconHover,
-                    "opacity-0": !model.store.iconHover,
-                  }}
-                >
-                  <Icon name={model.store.iconOverride ? "close" : "outline-share"} />
-                </span>
-              </button>
+              </div>
+
               <input
                 ref={(element) => {
                   model.setIconInput(element)
@@ -83,51 +241,214 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                 type="file"
                 accept="image/*"
                 class="hidden"
-                onChange={model.inputChange}
+                onChange={(event) => {
+                  model.inputChange(event)
+                  setIconMode("upload")
+                }}
               />
-              <div class="flex select-none flex-col gap-[6px] text-[11px] font-[440] leading-none tracking-[0.05px] text-v2-text-text-muted">
-                <span>{language.t("dialog.project.edit.icon.hint")}</span>
-                <span>{language.t("dialog.project.edit.icon.recommended")}</span>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap gap-1">
+                  <For each={["letter", "emoji", "svg", "upload"] as const}>
+                    {(mode) => (
+                      <button
+                        type="button"
+                        class={tabClass}
+                        classList={{
+                          "bg-v2-overlay-simple-overlay-pressed text-v2-text-text-base": iconMode() === mode,
+                          "text-v2-text-text-muted": iconMode() !== mode,
+                        }}
+                        onClick={() => {
+                          setIconMode(mode)
+                          if (mode === "letter") model.setStore("iconOverride", "")
+                        }}
+                      >
+                        {mode === "letter" ? "Letter" : mode === "emoji" ? "Emoji" : mode === "svg" ? "SVG" : "Upload"}
+                      </button>
+                    )}
+                  </For>
+                </div>
+                <div class="mt-2 text-[11px] leading-4 text-v2-text-text-faint">
+                  Built-in choices stay tiny; upload is still there when you actually want an image.
+                </div>
               </div>
             </div>
-          </div>
 
-          <Show when={!model.store.iconOverride}>
-            <div class="flex w-full flex-col gap-2">
-              <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-v2-text-text-base">
-                {language.t("dialog.project.edit.color")}
+            <div class="grid grid-cols-6 gap-1.5 rounded-[14px] bg-v2-background-bg-layer-01 p-1.5 shadow-[inset_0_1px_2px_var(--v2-alpha-dark-10),inset_0_-1px_1px_var(--v2-alpha-light-8)]">
+              <For each={PROJECT_AVATAR_SHAPES}>
+                {(shape) => (
+                  <button
+                    type="button"
+                    aria-label={`Use ${SHAPE_LABELS[shape]} project icon shape`}
+                    aria-pressed={model.store.shape === shape}
+                    class="flex min-w-0 flex-col items-center gap-1 rounded-[10px] px-1 py-1.5 text-[10px] leading-none text-v2-text-text-faint transition-[background-color,box-shadow,color] hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-v2-border-border-focus"
+                    classList={{
+                      "bg-v2-background-bg-button-neutral text-v2-text-text-base shadow-[var(--v2-elevation-button-neutral)]":
+                        model.store.shape === shape,
+                    }}
+                    onClick={() => model.setStore("shape", shape)}
+                  >
+                    <ProjectAvatar
+                      fallback={model.store.name || model.defaultName()}
+                      src={getProjectAvatarSource(props.project.id, {
+                        color: model.store.color,
+                        url: props.project.icon?.url,
+                        override: model.store.iconOverride,
+                      })}
+                      variant={resolvedColor()}
+                      shape={shape}
+                      class="!size-7 [&_[data-slot=project-avatar-surface]]:!text-[13px]"
+                    />
+                    <span class="w-full truncate text-center">{SHAPE_LABELS[shape]}</span>
+                  </button>
+                )}
+              </For>
+            </div>
+
+            <Show when={iconMode() === "emoji"}>
+              <div class="flex min-w-0 flex-col gap-2 rounded-[12px] bg-v2-background-bg-layer-01 p-2">
+                <div class="flex items-center gap-2 px-0.5">
+                  <span class="text-[11px] font-[530] text-v2-text-text-muted">Quick picks</span>
+                  <div class="h-px min-w-0 flex-1 bg-v2-border-border-muted" />
+                </div>
+                <div class="grid grid-cols-8 gap-1">
+                  <For each={EMOJI_CHOICES.slice(0, 16)}>
+                    {(emoji) => (
+                      <button
+                        type="button"
+                        class="grid size-8 place-items-center rounded-[7px] text-[18px] leading-none transition-colors hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-2 focus-visible:outline-v2-border-border-focus focus-visible:outline-offset-[-2px]"
+                        aria-label={"Use " + emoji + " as project icon"}
+                        onClick={() => chooseEmoji(emoji)}
+                      >
+                        <span class="block leading-none">{emoji}</span>
+                      </button>
+                    )}
+                  </For>
+                </div>
+                <div class="flex items-center gap-2 px-0.5 pt-0.5">
+                  <span class="text-[11px] font-[530] text-v2-text-text-muted">All emoji</span>
+                  <div class="h-px min-w-0 flex-1 bg-v2-border-border-muted" />
+                </div>
+                <FullEmojiPicker onSelect={chooseEmoji} />
+                <div class="flex items-center gap-1.5">
+                  <input
+                    value={customEmoji()}
+                    maxlength={32}
+                    placeholder="Paste an emoji…"
+                    class="h-8 min-w-0 flex-1 rounded-[7px] border border-v2-border-border-muted bg-v2-background-bg-base px-2 text-[13px] text-v2-text-text-base outline-none focus:border-v2-border-border-focus focus-visible:outline-2 focus-visible:outline-v2-border-border-focus focus-visible:outline-offset-[-2px]"
+                    onInput={(event) => setCustomEmoji(event.currentTarget.value)}
+                  />
+                  <ButtonV2
+                    type="button"
+                    variant="neutral"
+                    disabled={!customEmoji().trim()}
+                    onClick={() => chooseEmoji(customEmoji().trim())}
+                  >
+                    Use
+                  </ButtonV2>
+                </div>
               </div>
-              <div class="-ml-1 flex gap-1.5">
-                <For each={PROJECT_AVATAR_VARIANTS}>
-                  {(color) => (
+            </Show>
+
+            <Show when={iconMode() === "svg"}>
+              <div class="grid grid-cols-8 gap-1 rounded-[7px] bg-v2-background-bg-layer-01 p-2">
+                <For each={SVG_ICON_CHOICES}>
+                  {([name, label]) => (
                     <button
                       type="button"
-                      aria-label={language.t("dialog.project.edit.color.select", { color })}
-                      aria-pressed={getProjectAvatarVariant(model.store.color) === color}
-                      class="flex size-8 items-center justify-center rounded-[10px] p-1 outline outline-1 outline-transparent transition-[background-color,outline-color] hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-v2-border-border-focus"
-                      classList={{
-                        "bg-v2-overlay-simple-overlay-hover [box-shadow:inset_0_0_0_2px_var(--v2-border-border-focus)]":
-                          getProjectAvatarVariant(model.store.color) === color,
-                      }}
-                      onClick={() => {
-                        if (getProjectAvatarVariant(model.store.color) === color && !props.project.icon?.url) return
-                        model.setStore(
-                          "color",
-                          getProjectAvatarVariant(model.store.color) === color ? undefined : color,
-                        )
-                      }}
+                      title={label}
+                      aria-label={"Use " + label + " SVG icon"}
+                      class="flex size-8 items-center justify-center rounded-[5px] text-v2-icon-icon-base hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
+                      onClick={() => chooseSvg(name)}
                     >
-                      <ProjectAvatar
-                        fallback={model.store.name || model.defaultName()}
-                        variant={getProjectAvatarVariant(color)}
-                        class="!size-6 [&_[data-slot=project-avatar-surface]]:!rounded-[6px]"
-                      />
+                      <Icon name={name} size="normal" />
                     </button>
                   )}
                 </For>
               </div>
+            </Show>
+
+            <Show when={iconMode() === "upload"}>
+              <button
+                type="button"
+                class="flex h-9 w-full items-center justify-center gap-2 rounded-[6px] border border-v2-border-border-muted text-[12px] text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
+                onClick={() => model.iconClick()}
+              >
+                <Icon name="outline-share" size="small" />
+                Choose image
+              </button>
+            </Show>
+          </div>
+
+          <div class="flex w-full flex-col gap-2">
+            <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-v2-text-text-base">
+              {language.t("dialog.project.edit.color")}
             </div>
-          </Show>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                class="h-8 rounded-[6px] border px-2 text-[11px] transition-colors focus-visible:outline-none"
+                classList={{
+                  "border-v2-border-border-focus bg-v2-overlay-simple-overlay-pressed text-v2-text-text-base":
+                    !model.store.color,
+                  "border-v2-border-border-muted text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover":
+                    !!model.store.color,
+                }}
+                onClick={() => {
+                  model.setStore("color", undefined)
+                  setHexColor(projectColor.resolve(props.project, undefined) ?? "#5c5c5c")
+                }}
+              >
+                Auto
+              </button>
+              <For each={projectColor.accents()}>
+                {(accent) => (
+                  <button
+                    type="button"
+                    class="relative size-8 rounded-[7px] border border-v2-border-border-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-v2-border-border-focus"
+                    classList={{
+                      "ring-2 ring-v2-border-border-focus ring-offset-1 ring-offset-v2-background-bg-base":
+                        projectColor.selected(model.store.color) === accent.id,
+                    }}
+                    style={{ background: accent.color }}
+                    title={accent.id}
+                    aria-label={`Use theme project color ${accent.id}`}
+                    aria-pressed={projectColor.selected(model.store.color) === accent.id}
+                    onClick={() => {
+                      model.setStore("color", projectColor.value(accent.id))
+                      setHexColor(accent.color)
+                    }}
+                  />
+                )}
+              </For>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label
+                class="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-[7px] border border-v2-border-border-muted"
+                style={{ background: hexColor() }}
+                title="Choose any custom project color"
+              >
+                <input
+                  type="color"
+                  value={hexColor()}
+                  class="absolute inset-0 size-full cursor-pointer opacity-0"
+                  aria-label="Choose custom project color"
+                  onInput={(event) => setProjectColor(event.currentTarget.value)}
+                />
+              </label>
+              <input
+                value={hexColor()}
+                spellcheck={false}
+                maxlength={7}
+                aria-label="Custom project color hex value"
+                class="h-9 w-[108px] rounded-[6px] border border-v2-border-border-muted bg-v2-background-bg-base px-2 font-mono text-[12px] text-v2-text-text-base outline-none focus:border-v2-border-border-focus"
+                onInput={(event) => setProjectColor(event.currentTarget.value)}
+              />
+              <span class="text-[11px] text-v2-text-text-faint">Theme colors or any custom color.</span>
+            </div>
+          </div>
 
           <Field>
             <Field.Label>{language.t("dialog.project.edit.worktree.startup")}</Field.Label>

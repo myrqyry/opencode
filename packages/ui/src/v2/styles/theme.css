@@ -135,13 +135,34 @@
       inset 0px 2px 2px 0px var(--v2-alpha-dark-10), inset 0px 1px 1px 0px var(--v2-alpha-dark-10),
       inset 0px 0px 0px 0.5px var(--v2-alpha-dark-20);
 
+    /* ── Shape ──
+       Radius names a role, not a size. Ask for the job, not the measurement.
+       Steps are named by their weight in the ladder, because several roles
+       legitimately share a step (a small button, a toast, and a menu row all
+       sit at --v2-shape-raised). Choose the step the component's job implies.
+       Nesting law: a child inset within a parent takes the step below the
+       parent, so concentric edges stay visually parallel instead of colliding.
+       Contrast law: circle and pill belong to identity, capability marks, and
+       continuous magnitude. Do not pillify a rectangular control just because
+       soft is the house style; a grammar needs visible contrast between roles. */
+    --v2-shape-none: 0px; /* flush structural edge: dividers, inner fills, hairline wells */
+    --v2-shape-hairline: 2px; /* nested inner element fitted inside a control: thumb, keycap, focus offset */
+    --v2-shape-control-sm: 4px; /* compact control: chip, tab pill, checkbox, segment, keybind, menu row */
+    --v2-shape-control: 6px; /* default control: text field, select, settings row, accordion */
+    --v2-shape-raised: 8px; /* raised control: small button, toast, hover-card, drawer */
+    --v2-shape-surface: 10px; /* surface material: card, dock, icon plate, and the new-layout control tier */
+    --v2-shape-panel: 12px; /* panel: settings group, project workspace shell */
+    --v2-shape-sheet: 16px; /* sheet: dialog, menu surface, composer, large overlay */
+    --v2-shape-sheet-lift: 20px; /* focused sheet, one step above --v2-shape-sheet */
+    --v2-shape-pill: 9999px; /* identity, capability mark, radio, progress, scrollbar thumb */
+
     /* ── Illustration ── */
     --v2-illustration-illustration-layer-01: var(--v2-grey-300);
     --v2-illustration-illustration-layer-02: var(--v2-grey-400);
     --v2-illustration-illustration-layer-03: var(--v2-grey-500);
 
-    --font-family-text: "Inter", sans-serif;
-    --v2-font-family-sans: "Inter", sans-serif;
+    --font-family-text: var(--font-family-sans, "Bricolage Grotesque Variable", sans-serif);
+    --v2-font-family-sans: var(--font-family-sans, "Bricolage Grotesque Variable", sans-serif);
   }
 
   /* OS preference fallback (no JS needed) */

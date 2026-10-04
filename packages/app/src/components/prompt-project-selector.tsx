@@ -12,8 +12,8 @@ import { createStore } from "solid-js/store"
 import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
-import { ProjectAvatar } from "@opencode-ai/ui/v2/project-avatar-v2"
-import { getProjectAvatarVariant } from "@/context/layout"
+import { ProjectAvatar, type ProjectAvatarShape } from "@opencode-ai/ui/v2/project-avatar-v2"
+import { useProjectColor } from "@/utils/project-color"
 import { useLanguage } from "@/context/language"
 import { displayName, getProjectAvatarSource } from "@/pages/layout/helpers"
 import { pathKey } from "@/utils/path-key"
@@ -25,7 +25,7 @@ export type PromptProject = {
   id?: string
   worktree: string
   sandboxes?: string[]
-  icon?: { color?: string; url?: string; override?: string }
+  icon?: { color?: string; url?: string; override?: string; shape?: ProjectAvatarShape }
   server?: { key: string; name: string }
 }
 
@@ -456,6 +456,7 @@ export function PromptProjectAddButton(props: { controller: PromptProjectControl
 }
 
 function ProjectTrigger(props: ComponentProps<"button"> & { controller: PromptProjectController }) {
+  const projectColor = useProjectColor()
   const [local, rest] = splitProps(props, ["controller", "class", "classList", "onClick", "onKeyDown"])
   const project = () => local.controller.selected()
   return (
@@ -488,7 +489,8 @@ function ProjectTrigger(props: ComponentProps<"button"> & { controller: PromptPr
           <ProjectAvatar
             fallback={displayName(item())}
             src={getProjectAvatarSource(item().id, item().icon)}
-            variant={getProjectAvatarVariant(item().icon?.color)}
+            variant={projectColor.resolve(item())}
+            shape={item().icon?.shape}
           />
         )}
       </Show>
@@ -505,6 +507,7 @@ function ProjectItem(props: {
   controller: PromptProjectController
   onSelect: (project: PromptProject) => void
 }) {
+  const projectColor = useProjectColor()
   const key = () => props.controller.projectKey(props.project)
   return (
     <DropdownMenu.RadioItem
@@ -532,7 +535,8 @@ function ProjectItem(props: {
       <ProjectAvatar
         fallback={displayName(props.project)}
         src={getProjectAvatarSource(props.project.id, props.project.icon)}
-        variant={getProjectAvatarVariant(props.project.icon?.color)}
+        variant={projectColor.resolve(props.project)}
+        shape={props.project.icon?.shape}
       />
       <DropdownMenu.ItemLabel class="min-w-0 truncate leading-5">{displayName(props.project)}</DropdownMenu.ItemLabel>
       <DropdownMenu.ItemIndicator style={{ width: "14px", height: "14px", right: "12px" }}>

@@ -17,6 +17,7 @@ import {
   on,
   onMount,
   type ParentProps,
+  type JSX,
   untrack,
 } from "solid-js"
 import { makeEventListener } from "@solid-primitives/event-listener"
@@ -47,6 +48,7 @@ import { DirectoryDataProvider } from "@/pages/directory-layout"
 import { useServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
 import { useLayout } from "@/context/layout"
+import { useProjectColor } from "@/utils/project-color"
 import { ModelsProvider } from "@/context/models"
 import { useNotification } from "@/context/notification"
 import { PromptProvider, usePrompt } from "@/context/prompt"
@@ -85,7 +87,6 @@ import { SessionSidePanel } from "@/pages/session/session-side-panel"
 import { sessionPanelLayout } from "@/pages/session/session-panel-layout"
 import { SessionReviewEmptyChangesV2 } from "@opencode-ai/session-ui/v2/session-review-empty-changes-v2"
 import { SessionReviewEmptyNoGitV2 } from "@opencode-ai/session-ui/v2/session-review-empty-no-git-v2"
-import { SessionReviewV2SidebarToggle } from "@opencode-ai/session-ui/v2/session-review-v2"
 import { ReviewPanelV2 } from "@/pages/session/v2/review-panel-v2"
 import { createReviewPanelV2State } from "@/pages/session/v2/review-panel-v2-state"
 import { reviewDiffDirectory, reviewDiffNeedsLoad, reviewRootDirectory } from "@/pages/session/v2/review-diff-kinds"
@@ -326,9 +327,16 @@ function SessionProviders(props: ParentProps) {
   )
 }
 
-function SessionRouteFrame(props: ParentProps<{ padded?: boolean }>) {
+function SessionRouteFrame(props: ParentProps<{ padded?: boolean; accent?: string }>) {
+  const tintStyle = () => (props.accent ? `--project-accent:${props.accent}` : undefined)
+
   return (
-    <div class="relative size-full overflow-hidden flex flex-col" classList={{ "p-2": props.padded }}>
+    <div
+      class="relative size-full overflow-hidden flex flex-col bg-project-canvas transition-colors duration-200"
+      classList={{ "p-2": props.padded }}
+      data-project-tint={props.accent ? "" : undefined}
+      style={tintStyle()}
+    >
       {props.children}
     </div>
   )
@@ -337,13 +345,15 @@ function SessionRouteFrame(props: ParentProps<{ padded?: boolean }>) {
 function SessionPanelFrame(props: ParentProps<{ newLayout: boolean; raised?: boolean }>) {
   return (
     <div
+      data-component="session-middle-panel"
       classList={{
         "flex-1 min-h-0 flex flex-col": true,
-        "bg-v2-background-bg-base": props.newLayout,
+        "bg-project-surface": props.newLayout,
         "bg-background-stronger": !props.newLayout,
         "rounded-[10px] overflow-hidden": props.newLayout,
-        "shadow-[var(--v2-elevation-raised)]": props.newLayout && props.raised,
+        "shadow-soft-raised": props.newLayout && props.raised,
       }}
+      style={props.newLayout ? "transition:background-color 180ms ease" : undefined}
     >
       {props.children}
     </div>
@@ -353,6 +363,7 @@ function SessionPanelFrame(props: ParentProps<{ newLayout: boolean; raised?: boo
 export default function Page() {
   const serverSync = useServerSync()
   const layout = useLayout()
+  const projectColor = useProjectColor()
   const local = useLocal()
   const file = useFile()
   const sync = useSync()
@@ -360,6 +371,7 @@ export default function Page() {
   const dialog = useDialog()
   const language = useLanguage()
   const sdk = useSDK()
+  const server = useServer()
   const serverSDK = useServerSDK()
   const settings = useSettings()
   const platform = usePlatform()
@@ -370,11 +382,16 @@ export default function Page() {
   const [searchParams, setSearchParams] = useSearchParams<{ prompt?: string }>()
   const location = useLocation()
   const navigate = useNavigate()
-  const { params, sessionKey, workspaceKey, tabs, view } = useSessionLayout()
+  const { params, sessionKey, workspaceKey, tabs: sessionTabs, view } = useSessionLayout()
   const reviewMode = () => view().review.mode() ?? "git"
   const reviewFile = () => view().review.file()
   const sessionOwnership = createSessionOwnership(sessionKey)
   const newSessionDesign = createMemo(() => settings.general.newLayoutDesigns())
+  const workspaceTabs = createMemo(() => layout.tabs(workspaceKey))
+  const tabs = createMemo(() => (newSessionDesign() ? workspaceTabs() : sessionTabs()))
+  const projectAccent = createMemo(() =>
+    projectColor.resolve(sync().project ?? { worktree: sdk().directory }),
+  )
 
   createEffect(() => {
     if (!prompt.ready()) return
@@ -405,7 +422,6 @@ export default function Page() {
     queryOptions: serverSync().queryOptions,
   })
 
-  const workspaceTabs = createMemo(() => layout.tabs(workspaceKey))
   const sessionPanelKey = createMemo(() => (params.id ? `${serverSDK().scope}\0${params.id}` : undefined))
 
   createEffect(
@@ -414,6 +430,7 @@ export default function Page() {
       (id, prev) => {
         if (!id) return
         if (prev) return
+        if (newSessionDesign()) return
 
         const pending = layout.handoff.tabs()
         if (!pending) return
@@ -448,7 +465,9 @@ export default function Page() {
   const isDesktop = createMediaQuery("(min-width: 768px)")
   const size = createSizing()
   const desktopReviewOpen = createMemo(() => isDesktop() && view().reviewPanel.opened())
-  const desktopV2ReviewOpen = createMemo(() => newSessionDesign() && desktopReviewOpen() && !!params.id)
+  // The new layout's Files/Changes pane is owned by the persistent
+  // project workspace shell, not by an individual session route.
+  const desktopV2ReviewOpen = createMemo(() => false)
   const terminalOpen = createMemo(() => view().terminal.opened())
   const desktopTerminalOpen = createMemo(() => isDesktop() && terminalOpen())
   const desktopInlineTerminalOnlyOpen = createMemo(
@@ -456,6 +475,7 @@ export default function Page() {
   )
   const desktopFileTreeOpen = createMemo(
     () =>
+      !newSessionDesign() &&
       isDesktop() &&
       shouldShowFileTree({
         visible: settings.visibility.fileTree(),
@@ -466,6 +486,18 @@ export default function Page() {
     newSessionDesign() ? desktopV2ReviewOpen() || desktopTerminalOpen() : desktopReviewOpen(),
   )
   const desktopSidePanelOpen = createMemo(() => desktopSessionResizeOpen() || desktopFileTreeOpen())
+
+  createEffect(
+    on(
+      desktopReviewOpen,
+      (open, previous) => {
+        if (!newSessionDesign() || previous === undefined || open) return
+        layout.fileTree.close()
+      },
+      { defer: true },
+    ),
+  )
+
   let panelRow: HTMLDivElement | undefined
   const [panelRowWidth, setPanelRowWidth] = createSignal<number>()
   createResizeObserver(
@@ -539,8 +571,9 @@ export default function Page() {
     tabs,
     pathFromTab: file.pathFromTab,
     normalizeTab,
-    review: reviewTab,
+    review: () => !newSessionDesign() && reviewTab(),
     hasReview: canReview,
+    pinned: () => (newSessionDesign() ? ["files", "changes"] : []),
   })
   const activeTab = tabState.activeTab
   const activeFileTab = tabState.activeFileTab
@@ -669,7 +702,9 @@ export default function Page() {
   const wantsReview = createMemo(() =>
     isDesktop()
       ? desktopFileTreeOpen() ||
-        (desktopReviewOpen() && (activeTab() === "review" || (newSessionDesign() && !!activeFileTab())))
+        (desktopReviewOpen() &&
+          (activeTab() === "review" ||
+            (newSessionDesign() && (activeTab() === "changes" || !!activeFileTab()))))
       : store.mobileTab === "changes",
   )
   const vcsMode = createMemo<VcsMode | undefined>(() => {
@@ -1127,6 +1162,7 @@ export default function Page() {
   )
 
   const showAllFiles = () => {
+    if (newSessionDesign()) return
     if (fileTreeTab() !== "changes") return
     setFileTreeTab("all")
   }
@@ -1160,6 +1196,20 @@ export default function Page() {
     setActive: tabs().setActive,
     loadFile: file.load,
   })
+
+  const openReviewFileTab = (path: string) => {
+    view().review.openPath(path)
+    view().review.setFile(path)
+    const tab = file.tab(path)
+    const maybePromise = file.load(path)
+    const open = () => {
+      openReviewPanel()
+      tabs().open(tab)
+      tabs().setActive(tab)
+    }
+    if (maybePromise instanceof Promise) void maybePromise.then(open)
+    else open()
+  }
 
   const changesLabel = (option: ChangeMode) => {
     if (option === "git") return language.t("ui.sessionReview.title.git")
@@ -1260,6 +1310,7 @@ export default function Page() {
   }
 
   const reviewContent = (input: {
+    title?: JSX.Element
     diffStyle: DiffStyle
     onDiffStyleChange?: (style: DiffStyle) => void
     classes?: SessionReviewTabProps["classes"]
@@ -1268,7 +1319,7 @@ export default function Page() {
   }) => (
     <Show when={!store.deferRender}>
       <SessionReviewTab
-        title={changesTitle()}
+        title={input.title ?? changesTitle()}
         empty={reviewEmpty(input)}
         diffs={reviewDiffs}
         view={view}
@@ -1298,6 +1349,7 @@ export default function Page() {
   // the side panel's Show children and remounted the whole review panel on unrelated
   // updates such as session switches.
   const reviewPanelV2Props = () => ({
+    layout: "list" as const,
     get title() {
       return changesTitleV2()
     },
@@ -1313,7 +1365,7 @@ export default function Page() {
     get activeFile() {
       return activeReviewFile()
     },
-    onSelectFile: focusReviewDiff,
+    onSelectFile: openReviewFileTab,
     get diffStyle() {
       return layout.review.diffStyle()
     },
@@ -1350,8 +1402,25 @@ export default function Page() {
 
   const reviewPanelV2 = () => (
     <div class="flex flex-col h-full overflow-hidden bg-v2-background-bg-base contain-strict">
+      {reviewContent({
+        title: changesTitleV2(),
+        diffStyle: layout.review.diffStyle(),
+        onDiffStyleChange: layout.review.setDiffStyle,
+        loadingClass: "px-4 py-3 text-text-weak",
+        emptyClass: "h-full flex flex-col items-center justify-center text-center gap-6",
+        classes: {
+          root: "pr-3",
+          header: "px-3",
+          container: "pl-3",
+        },
+      })}
+    </div>
+  )
+
+  const reviewFilePanelV2 = (path: string) => (
+    <div class="flex flex-col h-full overflow-hidden bg-v2-background-bg-base contain-strict">
       <Show when={reviewPanelV2Rendered()}>
-        <ReviewPanelV2 {...reviewPanelV2Props()} />
+        <ReviewPanelV2 {...reviewPanelV2Props()} layout="preview" activeFile={path} />
       </Show>
     </div>
   )
@@ -2247,7 +2316,7 @@ export default function Page() {
   )
 
   return (
-    <SessionRouteFrame>
+    <SessionRouteFrame accent={projectAccent()}>
       <SessionHeader />
       <div
         ref={panelRow}
@@ -2322,35 +2391,6 @@ export default function Page() {
         <Show when={newSessionDesign()}>
           <Show when={isDesktop() ? desktopV2PanelLayout().visible : terminalOpen()}>
             <div class="min-w-0 h-full flex flex-1 flex-col">
-              <Show when={isDesktop() && (desktopV2ReviewOpen() || desktopFileTreeOpen())}>
-                <div class="min-h-0 flex-1">
-                  <Suspense>
-                    <SessionSidePanel
-                      canReview={canReview}
-                      diffs={reviewDiffs}
-                      diffsReady={reviewReady}
-                      empty={reviewEmptyText}
-                      hasReview={hasReview}
-                      reviewHasFocusableContent={() => hasReview() || reviewV2State.sidebarOpened()}
-                      reviewCount={reviewCount}
-                      reviewPanel={reviewPanelV2}
-                      reviewSidebarToggle={(disabled) => (
-                        <SessionReviewV2SidebarToggle
-                          opened={reviewV2State.sidebarOpened()}
-                          disabled={disabled}
-                          onToggle={reviewV2State.toggleSidebar}
-                        />
-                      )}
-                      fileBrowserState={reviewV2State}
-                      activeDiff={activeReviewFile()}
-                      focusReviewDiff={focusReviewDiff}
-                      reviewSnap={ui.reviewSnap}
-                      size={size}
-                      stacked={desktopV2PanelLayout().stacked}
-                    />
-                  </Suspense>
-                </div>
-              </Show>
               <Show when={desktopV2PanelLayout().stacked}>
                 <div class="relative h-2 shrink-0" onPointerDown={() => size.start()}>
                   <ResizeHandle

@@ -3,8 +3,9 @@ import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { Switch } from "@opencode-ai/ui/v2/switch-v2"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
+import { ButtonV2 } from "@opencode-ai/ui/v2/button-v2"
 import { TextInputV2 } from "@opencode-ai/ui/v2/text-input-v2"
-import { type Component, For, Show } from "solid-js"
+import { batch, createSignal, type Component, For, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "@/context/language"
 import { useModels } from "@/context/models"
@@ -23,13 +24,32 @@ export const SettingsModelsV2: Component = () => {
   const language = useLanguage()
   const models = useModels()
   const serverSdk = useServerSDK()
+  const [enabledOnly, setEnabledOnly] = createSignal(false)
   const [store, setStore] = persisted(
     Persist.serverGlobal(serverSdk().scope, "settings-v2.models.providers"),
     createStore({ collapsed: {} as Record<string, boolean> }),
   )
 
+  const providerModels = (providerID: string) => models.list().filter((item) => item.provider.id === providerID)
+  const providerEnabled = (providerID: string) => {
+    const items = providerModels(providerID)
+    return items.length > 0 && items.every((item) => models.visible({ providerID, modelID: item.id }))
+  }
+  const providerEnabledCount = (providerID: string) =>
+    providerModels(providerID).filter((item) => models.visible({ providerID, modelID: item.id })).length
+  const setProviderEnabled = (providerID: string, enabled: boolean) => {
+    batch(() => {
+      for (const item of providerModels(providerID)) {
+        models.setVisibility({ providerID, modelID: item.id }, enabled)
+      }
+    })
+  }
+
   const list = useFilteredList<ModelItem>({
-    items: (_filter) => models.list(),
+    items: (_filter) =>
+      models
+        .list()
+        .filter((item) => !enabledOnly() || models.visible({ providerID: item.provider.id, modelID: item.id })),
     key: (x) => `${x.provider.id}:${x.id}`,
     filterKeys: ["provider.name", "name", "id"],
     sortBy: (a, b) => a.name.localeCompare(b.name),
@@ -54,29 +74,39 @@ export const SettingsModelsV2: Component = () => {
     <>
       <div class="settings-v2-tab-header settings-v2-tab-header--stacked">
         <h2 class="settings-v2-tab-title">{language.t("settings.models.title")}</h2>
-        <div class="settings-v2-tab-search">
-          <TextInputV2
-            type="search"
-            appearance="base"
-            value={list.filter()}
-            onInput={(event) => list.onInput(event.currentTarget.value)}
-            placeholder={language.t("dialog.model.search.placeholder")}
-            spellcheck={false}
-            autocorrect="off"
-            autocomplete="off"
-            autocapitalize="off"
-            aria-label={language.t("dialog.model.search.placeholder")}
-          />
-          <Show when={list.filter()}>
-            <IconButtonV2
-              type="button"
-              variant="ghost-muted"
-              size="small"
-              class="settings-v2-tab-search-clear"
-              icon={<IconV2 name="close" size="large" class="text-v2-icon-icon-muted" />}
-              onClick={() => list.clear()}
+        <div class="flex items-center gap-2">
+          <div class="settings-v2-tab-search min-w-0 flex-1">
+            <TextInputV2
+              type="search"
+              appearance="base"
+              value={list.filter()}
+              onInput={(event) => list.onInput(event.currentTarget.value)}
+              placeholder={language.t("dialog.model.search.placeholder")}
+              spellcheck={false}
+              autocorrect="off"
+              autocomplete="off"
+              autocapitalize="off"
+              aria-label={language.t("dialog.model.search.placeholder")}
             />
-          </Show>
+            <Show when={list.filter()}>
+              <IconButtonV2
+                type="button"
+                variant="ghost-muted"
+                size="small"
+                class="settings-v2-tab-search-clear"
+                icon={<IconV2 name="close" size="large" class="text-v2-icon-icon-muted" />}
+                onClick={() => list.clear()}
+              />
+            </Show>
+          </div>
+          <ButtonV2
+            type="button"
+            size="small"
+            variant={enabledOnly() ? "neutral" : "ghost-muted"}
+            onClick={() => setEnabledOnly((value) => !value)}
+          >
+            Enabled only
+          </ButtonV2>
         </div>
       </div>
 
@@ -112,7 +142,7 @@ export const SettingsModelsV2: Component = () => {
                     data-component="settings-models-provider"
                     data-expanded={expanded() ? "" : undefined}
                   >
-                    <h3 class="settings-v2-models-group-header">
+                    <h3 class="settings-v2-models-group-header justify-between">
                       <button
                         type="button"
                         class="settings-v2-models-group-trigger"
@@ -148,8 +178,19 @@ export const SettingsModelsV2: Component = () => {
                             class="settings-v2-models-provider-icon shrink-0"
                           />
                           <span class="settings-v2-section-title">{group.items[0].provider.name}</span>
+                          <span class="shrink-0 text-[11px] text-v2-text-text-faint [font-weight:440]">
+                            {providerEnabledCount(group.category)} / {providerModels(group.category).length}
+                          </span>
                         </span>
                       </button>
+                      <Switch
+                        class="mr-3"
+                        checked={providerEnabled(group.category)}
+                        onChange={(checked) => setProviderEnabled(group.category, checked)}
+                        hideLabel
+                      >
+                        {group.items[0].provider.name}
+                      </Switch>
                     </h3>
                     <Show when={expanded()}>
                       <SettingsListV2>

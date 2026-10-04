@@ -56,11 +56,29 @@
   --tracking-tight: var(--letter-spacing-tight);
   --tracking-tightest: var(--letter-spacing-tightest);
 
+  /* Size-keyed scale. Prefer the role-keyed aliases below for V2 surfaces:
+     `rounded-md` is 6px but does not say whether it is a field or a row. */
   --radius-xs: 0.125rem;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.625rem;
+
+  /* ── Shape roles ──
+     These alias --v2-shape-* in packages/ui/src/v2/styles/theme.css, which
+     owns the grammar. Re-declared here so Tailwind emits rounded-<role>
+     utilities; the numbers are intentionally not duplicated. The role scale
+     reaches past the size scale above (panel/sheet), which is why panels and
+     sheets previously fell back to arbitrary values. */
+  --radius-hairline: var(--v2-shape-hairline);
+  --radius-control-sm: var(--v2-shape-control-sm);
+  --radius-control: var(--v2-shape-control);
+  --radius-raised: var(--v2-shape-raised);
+  --radius-surface: var(--v2-shape-surface);
+  --radius-panel: var(--v2-shape-panel);
+  --radius-sheet: var(--v2-shape-sheet);
+  --radius-sheet-lift: var(--v2-shape-sheet-lift);
+  --radius-pill: var(--v2-shape-pill);
 
   --shadow-xs: var(--shadow-xs);
   --shadow-md: var(--shadow-md);

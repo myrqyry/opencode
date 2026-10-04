@@ -3,6 +3,8 @@
   flex-shrink: 0;
   width: 16px;
   height: 16px;
+  transform: scale(1.18);
+  transform-origin: center;
 }
 
 [data-component="project-avatar-v2"][data-unread] {
@@ -20,10 +22,14 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: var(--v2-shape-pill);
   background:
     linear-gradient(180deg, var(--v2-alpha-light-16) 0%, var(--v2-alpha-light-0) 100%), var(--project-avatar-bg);
-  box-shadow: inset 0 0 0 0.5px var(--project-avatar-border);
+  box-shadow:
+    0 1.5px 3px var(--v2-alpha-dark-20),
+    inset 0 1px 1px var(--v2-alpha-light-20),
+    inset 0 -1px 1px var(--v2-alpha-dark-10),
+    inset 0 0 0 0.5px var(--project-avatar-border);
   font-weight: 530;
   font-size: 11px;
   line-height: 1;
@@ -34,6 +40,30 @@
   text-shadow: 0 0 4px var(--v2-alpha-dark-20);
   user-select: none;
   -webkit-user-select: none;
+}
+
+[data-slot="project-avatar-surface"][data-shape="circle"] {
+  border-radius: var(--v2-shape-pill);
+}
+
+[data-slot="project-avatar-surface"][data-shape="squircle"] {
+  border-radius: 38%;
+}
+
+[data-slot="project-avatar-surface"][data-shape="rounded"] {
+  border-radius: 28%;
+}
+
+[data-slot="project-avatar-surface"][data-shape="arch"] {
+  border-radius: 52% 52% 28% 28% / 58% 58% 30% 30%;
+}
+
+[data-slot="project-avatar-surface"][data-shape="leaf"] {
+  border-radius: 56% 24% 56% 24% / 56% 24% 56% 24%;
+}
+
+[data-slot="project-avatar-surface"][data-shape="gem"] {
+  border-radius: 34% 34% 46% 46% / 30% 30% 56% 56%;
 }
 
 [data-slot="project-avatar-surface"][data-variant="orange"] {
@@ -81,6 +111,15 @@
   --project-avatar-border: var(--v2-avatar-border-gray);
 }
 
+/* Custom hex colors are supplied by the component as
+   --project-avatar-custom-bg/-border. They must be consumed here because the
+   surface declares its own --project-avatar-bg default, which would otherwise
+   override the inherited inline value. */
+[data-slot="project-avatar-surface"][data-variant="custom"] {
+  --project-avatar-bg: var(--project-avatar-custom-bg, var(--v2-avatar-bg-gray));
+  --project-avatar-border: var(--project-avatar-custom-border, var(--v2-avatar-border-gray));
+}
+
 [data-slot="project-avatar-surface"][data-variant="outline"] {
   --project-avatar-bg: var(--v2-background-bg-base);
   --project-avatar-border: var(--v2-border-border-strong);
@@ -116,7 +155,7 @@
   height: 6px;
   right: -2px;
   top: -2px;
-  border-radius: 9999px;
+  border-radius: var(--v2-shape-pill);
   background: var(--v2-background-bg-accent);
   pointer-events: none;
 }

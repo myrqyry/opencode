@@ -17,7 +17,7 @@ import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { ServerAuth } from "../../src/server/auth"
 import { authorizationRouterMiddleware } from "../../src/server/routes/instance/httpapi/middleware/authorization"
 import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
-import { serveEmbeddedUIEffect, serveUIEffect } from "../../src/server/shared/ui"
+import { serveEmbeddedUIEffect, serveLocalUIEffect, serveUIEffect } from "../../src/server/shared/ui"
 import { testEffect } from "../lib/effect"
 
 const testStateLayer = Layer.effectDiscard(
@@ -296,6 +296,32 @@ describe("HttpApi UI fallback", () => {
       expect(response.status).toBe(200)
       expect(response.headers.get("transfer-encoding")).toBeNull()
       expect(yield* responseText(response)).toBe("<html>opencode</html>")
+    }),
+  )
+
+  it.live("serves an explicitly configured local UI asset", () =>
+    Effect.gen(function* () {
+      let readPath: string | undefined
+
+      const fs = yield* FSUtil.Service
+      const response = yield* serveLocalUIEffect(
+        "/assets/app.js",
+        {
+          ...fs,
+          readFile: (path) => {
+            readPath = path
+            return path === "/tmp/meristem-ui/assets/app.js"
+              ? Effect.succeed(new TextEncoder().encode("console.log('meristem')"))
+              : Effect.die(`unexpected local UI path: ${path}`)
+          },
+        },
+        "/tmp/meristem-ui",
+      ).pipe(Effect.map(HttpServerResponse.toWeb))
+
+      expect(response.status).toBe(200)
+      expect(readPath).toBe("/tmp/meristem-ui/assets/app.js")
+      expect(response.headers.get("content-type")).toContain("text/javascript")
+      expect(yield* responseText(response)).toBe("console.log('meristem')")
     }),
   )
 

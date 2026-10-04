@@ -176,6 +176,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   fsys: FSUtil.Interface,
   global: Global.Interface,
   disableExternalSkills: boolean,
+  disableGlobalSkills: boolean,
   disableClaudeCodeSkills: boolean,
   directory: string,
   worktree: string,
@@ -187,10 +188,12 @@ const discoverSkills = Effect.fnUntraced(function* (
     if (!disableClaudeCodeSkills) externalDirs.push(CLAUDE_EXTERNAL_DIR)
     externalDirs.push(AGENTS_EXTERNAL_DIR)
 
-    for (const dir of externalDirs) {
-      const root = path.join(global.home, dir)
-      if (!(yield* fsys.isDir(root))) continue
-      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global" })
+    if (!disableGlobalSkills) {
+      for (const dir of externalDirs) {
+        const root = path.join(global.home, dir)
+        if (!(yield* fsys.isDir(root))) continue
+        yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global" })
+      }
     }
 
     const upDirs = yield* fsys
@@ -203,7 +206,9 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 
   const configDirs = yield* config.directories()
+  const implicitGlobalConfigDirs = new Set([Global.Path.config, path.join(Global.Path.home, ".opencode")])
   for (const dir of configDirs) {
+    if (disableGlobalSkills && implicitGlobalConfigDirs.has(dir)) continue
     yield* scan(state, dir, OPENCODE_SKILL_PATTERN)
   }
 
@@ -264,6 +269,7 @@ const layer = Layer.effect(
           fsys,
           global,
           flags.disableExternalSkills,
+          flags.disableGlobalSkills,
           flags.disableClaudeCodeSkills,
           ctx.directory,
           ctx.worktree,

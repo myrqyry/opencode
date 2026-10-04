@@ -159,3 +159,22 @@ const table = sqliteTable("session", {
 - Keep delivery vocabulary explicit. Prompts steer by default and promote at the next safe provider-turn boundary while the current drain requires continuation. An explicit `queue` input remains pending until the Session would otherwise become idle; promote one queued input at that boundary, then reevaluate continuation before promoting another. Promoting any new user input resets the selected agent's provider-turn allowance; a batch of steers resets it once.
 - Keep EventV2 replay owner claims separate from clustered Session execution ownership.
 - Keep the System Context algebra, registry, and built-ins in `src/system-context`; keep Context Source producers with their observed domains, and keep Session History selection plus Context Epoch persistence Session-owned.
+
+<!-- meristem:start -->
+## Meristem project continuity
+
+This repository uses Meristem project state.
+
+Before non-trivial work:
+
+1. Treat current repository/runtime evidence as the authority for what exists now.
+2. Read `.meristem/PROJECT.md` for durable project purpose, invariants, and architecture boundaries when relevant.
+3. If `ACTIVE_WORK.md` exists, read it for the current objective, locked decisions, constraints, verification state, and unresolved uncertainty.
+4. Consult `.meristem/DECISIONS.md`, `LEARNINGS.md`, `ERRORS.md`, or `FEATURE_REQUESTS.md` only when they can materially change the current task.
+5. Do not promote session detail into durable files merely because it is recent. Persist consequential state before dependent continuation when losing it would make later work expensive or misleading.
+6. Preserve existing project conventions and working state. Do not broadly rewrite configuration or clean up unrelated code for convenience.
+7. Verify user-visible outcomes before claiming completion.
+8. Treat canonical `.meristem/*.md` files and `ACTIVE_WORK.md` as commit-safe repository knowledge. Keep secrets, personal continuity, raw conversations, and machine-specific state out of them; use `.meristem/local/` only for repo-local private/machine state.
+
+Use the narrowest capable tool or specialist. Current source and runtime truth outrank stale continuation notes.
+<!-- meristem:end -->

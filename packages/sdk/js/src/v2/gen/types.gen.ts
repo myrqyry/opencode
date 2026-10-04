@@ -2032,6 +2032,10 @@ export type Config = {
   }
 }
 
+export type EffectHttpApiErrorForbidden = {
+  _tag: "Forbidden"
+}
+
 export type Model = {
   id: string
   providerID: string
@@ -2336,6 +2340,14 @@ export type VcsApplyError = {
   data: {
     message: string
     reason: "non-git" | "not-clean"
+  }
+}
+
+export type VcsOperationError = {
+  name: "VcsOperationError"
+  data: {
+    message: string
+    reason: "non-git" | "invalid-path" | "empty-message" | "nothing-staged" | "failed"
   }
 }
 
@@ -2960,10 +2972,6 @@ export type ProjectCopyError = {
   }
 }
 
-export type EffectHttpApiErrorForbidden = {
-  _tag: "Forbidden"
-}
-
 export type EventTuiPromptAppend2 = {
   id: string
   type: "tui.prompt.append"
@@ -3167,10 +3175,13 @@ export type QuestionV2Answer = Array<string>
 
 export type ProjectVcs = "git"
 
+export type ProjectIconShape = "circle" | "squircle" | "rounded" | "arch" | "leaf" | "gem"
+
 export type ProjectIcon = {
   url?: string
   override?: string
   color?: string
+  shape?: ProjectIconShape
 }
 
 export type ProjectCommands = {
@@ -7249,6 +7260,8 @@ export type GlobalHealthResponses = {
   200: {
     healthy: true
     version: string
+    pid: number
+    restartable: boolean
   }
 }
 
@@ -7388,6 +7401,38 @@ export type GlobalUpgradeResponses = {
 }
 
 export type GlobalUpgradeResponse = GlobalUpgradeResponses[keyof GlobalUpgradeResponses]
+
+export type GlobalRestartData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/global/restart"
+}
+
+export type GlobalRestartErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Forbidden
+   */
+  403: EffectHttpApiErrorForbidden
+}
+
+export type GlobalRestartError = GlobalRestartErrors[keyof GlobalRestartErrors]
+
+export type GlobalRestartResponses = {
+  /**
+   * Restart requested
+   */
+  200: {
+    restarting: true
+    pid: number
+  }
+}
+
+export type GlobalRestartResponse = GlobalRestartResponses[keyof GlobalRestartResponses]
 
 export type EventSubscribeData = {
   body?: never
@@ -8140,6 +8185,38 @@ export type PathGetResponses = {
 
 export type PathGetResponse = PathGetResponses[keyof PathGetResponses]
 
+export type InstanceOpenDirectoryData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/instance/open-directory"
+}
+
+export type InstanceOpenDirectoryErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Error
+   */
+  500: EffectHttpApiErrorForbidden | EffectHttpApiErrorInternalServerError
+}
+
+export type InstanceOpenDirectoryError = InstanceOpenDirectoryErrors[keyof InstanceOpenDirectoryErrors]
+
+export type InstanceOpenDirectoryResponses = {
+  /**
+   * Directory open request accepted
+   */
+  200: boolean
+}
+
+export type InstanceOpenDirectoryResponse = InstanceOpenDirectoryResponses[keyof InstanceOpenDirectoryResponses]
+
 export type VcsGetData = {
   body?: never
   path?: never
@@ -8202,7 +8279,7 @@ export type VcsDiffData = {
   query: {
     directory?: string
     workspace?: string
-    mode: "git" | "branch"
+    mode: "git" | "branch" | "staged" | "unstaged"
     context?: number
   }
   url: "/vcs/diff"
@@ -8285,6 +8362,103 @@ export type VcsApplyResponses = {
 }
 
 export type VcsApplyResponse = VcsApplyResponses[keyof VcsApplyResponses]
+
+export type VcsStageData = {
+  body?: {
+    files: Array<string>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/vcs/stage"
+}
+
+export type VcsStageErrors = {
+  /**
+   * VcsOperationError | InvalidRequestError
+   */
+  400: VcsOperationError | InvalidRequestError
+}
+
+export type VcsStageError = VcsStageErrors[keyof VcsStageErrors]
+
+export type VcsStageResponses = {
+  /**
+   * VCS files staged
+   */
+  200: {
+    changed: boolean
+  }
+}
+
+export type VcsStageResponse = VcsStageResponses[keyof VcsStageResponses]
+
+export type VcsUnstageData = {
+  body?: {
+    files: Array<string>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/vcs/unstage"
+}
+
+export type VcsUnstageErrors = {
+  /**
+   * VcsOperationError | InvalidRequestError
+   */
+  400: VcsOperationError | InvalidRequestError
+}
+
+export type VcsUnstageError = VcsUnstageErrors[keyof VcsUnstageErrors]
+
+export type VcsUnstageResponses = {
+  /**
+   * VCS files unstaged
+   */
+  200: {
+    changed: boolean
+  }
+}
+
+export type VcsUnstageResponse = VcsUnstageResponses[keyof VcsUnstageResponses]
+
+export type VcsCommitData = {
+  body?: {
+    message: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/vcs/commit"
+}
+
+export type VcsCommitErrors = {
+  /**
+   * VcsOperationError | InvalidRequestError
+   */
+  400: VcsOperationError | InvalidRequestError
+}
+
+export type VcsCommitError = VcsCommitErrors[keyof VcsCommitErrors]
+
+export type VcsCommitResponses = {
+  /**
+   * VCS commit created
+   */
+  200: {
+    committed: boolean
+    hash: string
+  }
+}
+
+export type VcsCommitResponse = VcsCommitResponses[keyof VcsCommitResponses]
 
 export type CommandListData = {
   body?: never
@@ -11256,6 +11430,8 @@ export type V2HealthGetResponses = {
    */
   200: {
     healthy: true
+    version: string
+    pid: number
   }
 }
 

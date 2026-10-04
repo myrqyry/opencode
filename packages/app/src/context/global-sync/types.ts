@@ -6,6 +6,7 @@ import type {
   Part,
   Path,
   PermissionRequest,
+  ProjectIcon,
   QuestionRequest,
   ReferenceInfo,
   Session,
@@ -21,10 +22,7 @@ import type { SetStoreFunction, Store } from "solid-js/store"
 
 export type ProjectMeta = {
   name?: string
-  icon?: {
-    override?: string
-    color?: string
-  }
+  icon?: Pick<ProjectIcon, "override" | "color" | "shape">
   commands?: {
     start?: string
   }

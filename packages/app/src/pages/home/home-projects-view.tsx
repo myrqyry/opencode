@@ -11,7 +11,8 @@ import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { MenuV2 } from "@opencode-ai/ui/v2/menu-v2"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
-import { getProjectAvatarVariant, type HomeProjectSelection, type LocalProject } from "@/context/layout"
+import { type HomeProjectSelection, type LocalProject } from "@/context/layout"
+import { useProjectColor } from "@/utils/project-color"
 import { ServerConnection } from "@/context/server"
 import { useLanguage } from "@/context/language"
 import { usePlatform } from "@/context/platform"
@@ -208,7 +209,7 @@ function HomeServerRow(props: {
     if (props.contextMenuOpen(id)) props.onSetContextMenuOpen(id, false)
   })
   return (
-    <div class="group/server relative flex h-7 min-w-0 items-center rounded-[6px]">
+    <div class="group/server relative flex h-7 min-w-0 items-center rounded-[10px]">
       <HomeProjectNavButton
         type="button"
         class="pr-16 disabled:opacity-60"
@@ -473,7 +474,7 @@ function HomeProjectRow(
   return (
     <div
       ref={sortable.ref}
-      class="group/project relative flex h-7 min-w-0 items-center rounded-[6px]"
+      class="group/project relative flex h-7 min-w-0 items-center rounded-[10px]"
       classList={{ "z-10": sortable.isDragSource() }}
       onContextMenu={(event) => {
         event.preventDefault()
@@ -591,10 +592,10 @@ function HomeProjectNavButton(props: JSX.ButtonHTMLAttributes<HTMLButtonElement>
     <button
       {...rest}
       class={`
-        flex h-7 min-w-0 w-full shrink-0 cursor-default items-center gap-2 rounded-[6px] bg-transparent px-1.5 text-left
+        flex h-7 min-w-0 w-full shrink-0 cursor-default items-center gap-2 rounded-[10px] bg-transparent px-1.5 text-left
         text-v2-text-text-muted [font-weight:440] transition-[background-color,color,box-shadow] duration-[120ms] ease-in-out
         hover:bg-v2-background-bg-layer-01 hover:text-v2-text-text-base
-        data-[selected]:bg-v2-background-bg-layer-03 data-[selected]:text-v2-text-text-base
+        data-[selected]:bg-v2-background-bg-layer-03 data-[selected]:text-v2-text-text-base data-[selected]:shadow-[var(--v2-elevation-button-neutral)]
         data-[selected]:hover:bg-v2-background-bg-layer-03
         focus-visible:bg-v2-background-bg-layer-01 focus-visible:text-v2-text-text-base focus-visible:outline-none
         focus-visible:[box-shadow:inset_0_0_0_0.5px_var(--v2-border-border-muted)]
@@ -608,12 +609,14 @@ function HomeProjectNavButton(props: JSX.ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 function HomeProjectAvatar(props: { project: LocalProject; outline?: boolean }) {
+  const projectColor = useProjectColor()
   const name = createMemo(() => displayName(props.project))
   return (
     <ProjectAvatar
       fallback={name()}
       src={props.outline ? undefined : getProjectAvatarSource(props.project.id, props.project.icon)}
-      variant={props.outline ? "outline" : getProjectAvatarVariant(props.project.icon?.color)}
+      variant={props.outline ? "outline" : projectColor.resolve(props.project)}
+      shape={props.project.icon?.shape}
     />
   )
 }

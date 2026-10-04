@@ -9,6 +9,7 @@ import { usePlatform } from "./platform"
 import { uuid } from "@/utils/uuid"
 import { SessionTabsRemovedDetail } from "@/components/titlebar-session-events"
 import { sessionHref } from "@/utils/session-route"
+import { base64Encode } from "@opencode-ai/core/util/encode"
 import { createTabMemory } from "./tab-memory"
 import { nextTabAfterClose, pushClosedTab, removeClosedTabs, takeClosedTab, type ClosedTab } from "./closed-tabs"
 import { createDraftPromptSession, type PromptModel } from "./prompt-state"
@@ -28,7 +29,17 @@ export type DraftTab = {
   worktree?: string
 }
 
-export type Tab = SessionTab | DraftTab
+export const WORKSPACE_VIEWS = ["settings", "models", "providers", "skills"] as const
+export type WorkspaceView = (typeof WORKSPACE_VIEWS)[number]
+
+export type WorkspaceTab = {
+  type: "workspace"
+  view: WorkspaceView
+  server: ServerConnection.Key
+  directory: string
+}
+
+export type Tab = SessionTab | DraftTab | WorkspaceTab
 
 export type TabInfo = {
   title?: string
@@ -41,10 +52,17 @@ type RecentTab = {
 
 export const draftHref = (draftID: string) => `/new-session?draftId=${encodeURIComponent(draftID)}`
 
-export const tabHref = (tab: Tab) =>
-  tab.type === "draft" ? draftHref(tab.draftID) : sessionHref(tab.server, tab.sessionId)
+export const workspaceHref = (tab: WorkspaceTab) =>
+  `/workspace/${base64Encode(tab.server)}/${base64Encode(tab.directory)}/${tab.view}`
 
-export const tabKey = (tab: Tab) => (tab.type === "draft" ? `draft:${tab.draftID}` : `${tab.server}\n${tabHref(tab)}`)
+export const tabHref = (tab: Tab) => {
+  if (tab.type === "draft") return draftHref(tab.draftID)
+  if (tab.type === "workspace") return workspaceHref(tab)
+  return sessionHref(tab.server, tab.sessionId)
+}
+
+export const tabKey = (tab: Tab) =>
+  tab.type === "draft" ? `draft:${tab.draftID}` : `${tab.server}\n${tabHref(tab)}`
 
 export function sessionHasOpenTab(tabs: Tab[], server: ServerConnection.Key, session: Session) {
   return tabs.some((tab) => tab.type === "session" && tab.server === server && tab.sessionId === session.id)
@@ -191,6 +209,24 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
         })
         return next
       },
+      openWorkspaceTab(tab: Omit<WorkspaceTab, "type">) {
+        const next = { type: "workspace" as const, ...tab }
+        const existing = store.find((item) => tabKey(item) === tabKey(next))
+        if (existing) {
+          navigateTab(existing)
+          return existing
+        }
+        void startTransition(() => {
+          setStore(
+            produce((tabs) => {
+              if (tabs.some((item) => tabKey(item) === tabKey(next))) return
+              tabs.push(next)
+            }),
+          )
+          navigateTab(next)
+        })
+        return next
+      },
       reorder(keys: string[]) {
         setStore(
           produce((tabs) => {
@@ -255,6 +291,42 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
         if (!tab) return
         if (tab.type === "session") updateClosed((stack) => pushClosedTab(stack, tab, index))
         removeTab(index)
+      },
+      closeTabs(keys: string[]) {
+        const remove = new Set(keys)
+        if (remove.size === 0) return
+
+        const removed = store
+          .map((tab, index) => ({ tab, index, key: tabKey(tab) }))
+          .filter((entry) => remove.has(entry.key))
+        if (removed.length === 0) return
+
+        updateClosed((stack) => removed.reduce((next, entry) => pushClosedTab(next, entry.tab, entry.index), stack))
+
+        const activeKey = recentKey()
+        const activeRemoved = !!activeKey && remove.has(activeKey)
+        const firstIndex = removed[0]?.index ?? 0
+        const remaining = store.filter((tab) => !remove.has(tabKey(tab)))
+        const fallbackTab = activeRemoved
+          ? remaining[Math.min(firstIndex, Math.max(remaining.length - 1, 0))] ?? remaining[firstIndex - 1]
+          : undefined
+
+        void startTransition(() => {
+          setStore(() => remaining)
+          if (activeRemoved) {
+            if (fallbackTab) navigateTab(fallbackTab)
+            else {
+              setRecentKey(undefined)
+              navigate("/")
+            }
+          }
+        })
+
+        for (const entry of removed) {
+          memory.remove(entry.key)
+          removeInfo(entry.key)
+          if (entry.tab.type === "draft") removeDraftPersisted(entry.tab.draftID)
+        }
       },
       reopenClosedTab() {
         if (!closedReady()) {

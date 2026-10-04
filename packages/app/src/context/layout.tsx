@@ -8,62 +8,25 @@ import { useServerSDK } from "./server-sdk"
 import { RECENTLY_CLOSED_DISPLAY_LIMIT, ServerConnection, useServer } from "./server"
 import { usePlatform } from "./platform"
 import { Project } from "@opencode-ai/sdk/v2"
-import { normalizeProjectInfo } from "./global-sync/utils"
 import { Persist, persisted, removePersisted } from "@/utils/persist"
 import { pathKey } from "@/utils/path-key"
 import { decode64 } from "@/utils/base64"
 import { same } from "@/utils/same"
 import { createScrollPersistence, type SessionScroll } from "./layout-scroll"
 import { createPathHelpers } from "./file/path"
-import type { ProjectAvatarVariant } from "@opencode-ai/ui/v2/project-avatar-v2"
 import { migrateLegacySessionStateKeys, ServerScope, SessionStateKey } from "@/utils/server-scope"
 import { createSessionKeyReader, ensureSessionKey, pruneSessionKeys } from "./layout-helpers"
 import { requireServerKey } from "@/utils/session-route"
-import { type DraftTab, useTabs } from "./tabs"
+import { type DraftTab, WORKSPACE_VIEWS, type WorkspaceView, useTabs } from "./tabs"
 import { closeSessionTab, openSessionTab, previewSessionTab, type SessionTabs } from "./layout-tabs"
 
 export { createSessionKeyReader, ensureSessionKey, pruneSessionKeys }
 
-export type { ProjectAvatarVariant }
-
-const AVATAR_COLOR_KEYS = ["pink", "mint", "orange", "purple", "cyan", "lime"] as const
 const DEFAULT_SIDEBAR_WIDTH = 344
 const DEFAULT_FILE_TREE_WIDTH = 200
 const DEFAULT_SESSION_WIDTH = 600
 const DEFAULT_TERMINAL_HEIGHT = 280
 const DEFAULT_REVIEW_PANEL_OPENED = false
-export type AvatarColorKey = (typeof AVATAR_COLOR_KEYS)[number]
-
-export function getAvatarColors(key?: string) {
-  if (key && AVATAR_COLOR_KEYS.includes(key as AvatarColorKey)) {
-    return {
-      background: `var(--avatar-background-${key})`,
-      foreground: `var(--avatar-text-${key})`,
-    }
-  }
-  return {
-    background: "var(--surface-info-base)",
-    foreground: "var(--text-base)",
-  }
-}
-
-export function getProjectAvatarVariant(key?: string): ProjectAvatarVariant {
-  if (key === "mint") return "cyan"
-  if (key === "lime") return "green"
-  if (
-    key === "orange" ||
-    key === "yellow" ||
-    key === "cyan" ||
-    key === "green" ||
-    key === "red" ||
-    key === "pink" ||
-    key === "blue" ||
-    key === "purple" ||
-    key === "gray"
-  )
-    return key
-  return "gray"
-}
 
 type SessionView = {
   scroll: Record<string, SessionScroll>
@@ -92,6 +55,7 @@ export type ReviewPanelSource = "context-button" | "other"
 export type LayoutRoute =
   | { type: "home" }
   | { type: "draft"; draftID: string; server?: ServerConnection.Key }
+  | { type: "workspace"; view: WorkspaceView; directory: string; server: ServerConnection.Key }
   | { type: "dir-new-sesssion"; dir: string; dirBase64: string; server?: ServerConnection.Key }
   | { type: "session"; sessionId: string; server?: ServerConnection.Key }
 
@@ -135,6 +99,18 @@ export const currentRoute = (pathname: string, search: string): LayoutRoute => {
     const draftID = new URLSearchParams(search).get("draftId")
     if (!draftID) return { type: "home" }
     return { type: "draft", draftID }
+  }
+
+  if (parts[0] === "workspace" && parts[1] && parts[2] && parts[3]) {
+    const view = parts[3]
+    const directory = decode64(parts[2])
+    if (!directory || !WORKSPACE_VIEWS.includes(view as WorkspaceView)) return { type: "home" }
+    return {
+      type: "workspace",
+      view: view as WorkspaceView,
+      directory,
+      server: requireServerKey(parts[1]),
+    }
   }
 
   if (parts[0] === "server" && parts[2] === "session" && parts[3]) {
@@ -433,15 +409,6 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
       })
     })
 
-    const [colors, setColors] = createStore<Record<string, AvatarColorKey>>({})
-    const colorRequested = new Map<string, AvatarColorKey>()
-
-    function pickAvailableColor(used: Set<string>): AvatarColorKey {
-      const available = AVATAR_COLOR_KEYS.filter((c) => !used.has(c))
-      if (available.length === 0) return AVATAR_COLOR_KEYS[Math.floor(Math.random() * AVATAR_COLOR_KEYS.length)]
-      return available[Math.floor(Math.random() * available.length)]
-    }
-
     function enrich(project: { worktree: string; expanded: boolean }) {
       const [childStore] = serverSync().child(project.worktree, { bootstrap: false })
       const projectID = childStore.project
@@ -514,15 +481,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
     })
 
     const enriched = createMemo(() => server.projects.list().map(enrich))
-    const list = createMemo(() => {
-      const projects = enriched()
-      return projects.map((project) => {
-        const color = project.icon?.color ?? colors[project.worktree]
-        if (!color) return project
-        const icon = project.icon ? { ...project.icon, color } : { color }
-        return { ...project, icon }
-      })
-    })
+    const list = enriched
 
     createEffect(() => {
       const projects = enriched()
@@ -533,59 +492,6 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         if (!project.id) continue
         if (project.id === "global") continue
         serverSync().project.icon(project.worktree, project.icon?.override)
-      }
-    })
-
-    createEffect(() => {
-      const projects = enriched()
-      if (projects.length === 0) return
-
-      for (const project of projects) {
-        if (project.icon?.color) colorRequested.delete(project.worktree)
-      }
-
-      const used = new Set<string>()
-      for (const project of projects) {
-        const color = project.icon?.color ?? colors[project.worktree]
-        if (color) used.add(color)
-      }
-
-      for (const project of projects) {
-        if (project.icon?.color || project.icon?.override || project.icon?.url) continue
-        const worktree = project.worktree
-        const existing = colors[worktree]
-        const color = existing ?? pickAvailableColor(used)
-        if (!existing) {
-          used.add(color)
-          setColors(worktree, color)
-        }
-        if (!project.id) continue
-
-        const requested = colorRequested.get(worktree)
-        if (requested === color) continue
-        colorRequested.set(worktree, color)
-
-        if (project.id === "global") {
-          serverSync().project.meta(worktree, { icon: { color } })
-          continue
-        }
-
-        const projectID = project.id
-        void (async () => {
-          const sdk = serverSdk()
-          if ((await sdk.protocol) !== "v1") return
-          return sdk.client.project
-            .update({ projectID, directory: worktree, icon: { color } })
-            .then((response) => response.data)
-            .then((result) => {
-              if (!result) return
-              serverSync().set("project", (items) =>
-                items.map((item) => (item.id === result.id ? normalizeProjectInfo(result) : item)),
-              )
-            })
-        })().catch(() => {
-          if (colorRequested.get(worktree) === color) colorRequested.delete(worktree)
-        })
       }
     })
 

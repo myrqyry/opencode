@@ -7,6 +7,7 @@ import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { MenuV2 } from "@opencode-ai/ui/v2/menu-v2"
 import { useGlobal } from "@/context/global"
+import { useProjectColor } from "@/utils/project-color"
 import { useLanguage } from "@/context/language"
 import { ServerConnection, serverName } from "@/context/server"
 import { displayName, projectForSession } from "@/pages/layout/helpers"
@@ -36,6 +37,7 @@ export function TabNavItem(props: {
   hidden?: boolean
 }) {
   const language = useLanguage()
+  const projectColor = useProjectColor()
   const [menu, setMenu] = createStore({ open: false, rename: false })
   const [editing, setEditing] = createSignal(false)
   const [titleOverflowing, setTitleOverflowing] = createSignal(false)
@@ -60,6 +62,13 @@ export function TabNavItem(props: {
     return projectForSession(session, serverCtx()?.projects.list() ?? [])
   })
   const title = createMemo(() => props.session()?.title ?? props.fallbackTitle)
+  const projectAccent = createMemo(() => {
+    const value = project()
+    if (value) return projectColor.resolve(value)
+    const session = props.session()
+    if (!session) return
+    return projectColor.resolve({ worktree: session.directory })
+  })
 
   const projectName = createMemo(() => {
     const session = props.session()
@@ -185,6 +194,8 @@ export function TabNavItem(props: {
       data-slot="titlebar-tab-item"
       data-title-overflow={titleOverflowing()}
       data-editing={editing()}
+      data-project-tint={projectAccent() ? "" : undefined}
+      style={projectAccent() ? `--project-accent:${projectAccent()}` : undefined}
       class="group relative flex h-7 w-full min-w-0 select-none flex-row items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-[6px] px-1.5 [container-type:inline-size]"
       classList={{ invisible: props.hidden }}
       data-active={props.active}

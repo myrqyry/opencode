@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch, createEffect, createMemo, onCleanup, type JSX } from "solid-js"
+import { For, Match, Show, Switch, createEffect, createMemo, onCleanup, untrack, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createMediaQuery } from "@solid-primitives/media"
 import { DragDropProvider as DndKitProvider, PointerSensor } from "@dnd-kit/solid"
@@ -20,9 +20,7 @@ import { Icon } from "@opencode-ai/ui/icon"
 import { TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Mark } from "@opencode-ai/ui/logo"
-import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { KeybindV2 } from "@opencode-ai/ui/v2/keybind-v2"
-import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import type { SnapshotFileDiff, VcsFileDiff } from "@opencode-ai/sdk/v2"
 import type { FileDiffInfo } from "@opencode-ai/client/promise"
 import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
@@ -35,7 +33,7 @@ import { SessionContextUsage } from "@/components/session-context-usage"
 const reviewTabID = "session-side-panel-review-tab"
 const reviewTabPanelID = "session-side-panel-review-tabpanel"
 const fileBrowserTabPanelID = "session-side-panel-file-browser-tabpanel"
-import { SessionContextTab, SortableTab, SortableTabV2, FileVisual } from "@/components/session"
+import { ProjectTab, ProjectTabStrip, SessionContextTab, SortableTab, SortableTabV2, FileVisual } from "@/components/session"
 import { OpenInAppV2 } from "@/components/session/open-in-app-v2"
 import { useCommand } from "@/context/command"
 import { useFile, type SelectedLineRange } from "@/context/file"
@@ -59,7 +57,7 @@ import { SessionFileBrowserTab, type SessionFileBrowserState } from "@/pages/ses
 
 type ReviewDiff = FileDiffInfo | SnapshotFileDiff | VcsFileDiff
 type RenderDiff = FileDiffInfo | (SnapshotFileDiff & { file: string }) | VcsFileDiff
-const FILE_TREE_WIDTH_MIN = 240
+const FILE_TREE_WIDTH_MIN = 160
 
 function renderDiff(value: ReviewDiff): value is RenderDiff {
   return typeof value.file === "string"
@@ -74,6 +72,7 @@ export function SessionSidePanel(props: {
   reviewHasFocusableContent: () => boolean
   reviewCount: () => number
   reviewPanel: () => JSX.Element
+  reviewFilePanel?: (path: string) => JSX.Element
   reviewSidebarToggle?: (disabled: boolean) => JSX.Element
   fileBrowserState?: SessionFileBrowserState
   activeDiff?: string
@@ -89,7 +88,9 @@ export function SessionSidePanel(props: {
   const command = useCommand()
   const dialog = useDialog()
   const sdk = useSDK()
-  const { sessionKey, tabs, view, params } = useSessionLayout()
+  const { sessionKey, workspaceKey, tabs: sessionTabs, view } = useSessionLayout()
+  const workspaceTabs = createMemo(() => layout.tabs(workspaceKey))
+  const tabs = createMemo(() => (settings.general.newLayoutDesigns() ? workspaceTabs() : sessionTabs()))
   const projectDirectory = createMemo(() => sdk().directory)
 
   const isDesktop = createMediaQuery("(min-width: 768px)")
@@ -105,11 +106,15 @@ export function SessionSidePanel(props: {
       }),
   )
   const open = createMemo(() => reviewOpen() || fileOpen())
+
+  // In V2 the compact file tree remains the one canonical navigation
+  // sidebar. Review can open beside it as content/preview without mounting a
+  // second file-navigation sidebar.
   const fileTreeWidth = createMemo(() => Math.max(FILE_TREE_WIDTH_MIN, layout.fileTree.width()))
   const reviewTab = createMemo(() => isDesktop())
   const panelWidth = createMemo(() => {
     if (!open()) return "0px"
-    if (reviewOpen()) return "auto"
+    if (settings.general.newLayoutDesigns() || reviewOpen()) return "auto"
     return `${fileTreeWidth()}px`
   })
   const treeWidth = createMemo(() => (fileOpen() ? `${fileTreeWidth()}px` : "0px"))
@@ -173,13 +178,15 @@ export function SessionSidePanel(props: {
     setActive: tabs().setActive,
   })
 
+  const pinnedResourceTabs = () => ["files", "changes"]
   const tabState = createSessionTabs({
     tabs,
     pathFromTab: file.pathFromTab,
     normalizeTab,
-    review: reviewTab,
+    review: () => !settings.general.newLayoutDesigns() && reviewTab(),
     hasReview: props.canReview,
-    fileBrowser: () => !!props.fileBrowserState,
+    fileBrowser: () => !settings.general.newLayoutDesigns() && !!props.fileBrowserState,
+    pinned: () => (settings.general.newLayoutDesigns() ? pinnedResourceTabs() : []),
   })
   const contextOpen = tabState.contextOpen
   const openFileOpen = tabState.openFileOpen
@@ -212,35 +219,53 @@ export function SessionSidePanel(props: {
     queueMicrotask(() => tabs().setActive(next))
   }
   const openFileBrowser = () => {
+    if (settings.general.newLayoutDesigns()) {
+      layout.fileTree.setTab("all")
+      layout.fileTree.open()
+      openReviewPanel()
+      tabs().setActive("files")
+      queueMicrotask(() => fileFilter?.focus())
+      return
+    }
     previewTab(SESSION_OPEN_FILE_TAB)
     queueMicrotask(() => fileFilter?.focus())
   }
   const activateTab = (value: string) => {
     const next = normalizeTab(value)
+    if (settings.general.newLayoutDesigns() && (next === "files" || next === "changes")) {
+      layout.fileTree.setTab(next === "changes" ? "changes" : "all")
+      layout.fileTree.open()
+    }
     const path = file.pathFromTab(next)
     if (path) void file.load(path)
     openReviewPanel()
     tabs().setActive(next)
   }
-  const browserTab = createMemo(() => {
-    if (!props.fileBrowserState) return undefined
-    const active = activeTab()
-    if (active === SESSION_OPEN_FILE_TAB) return SESSION_OPEN_FILE_TAB
-    if (active && file.pathFromTab(active)) return active
-    return activeFileTab()
+  // The top-level tab strip owns navigation in the V2 panel. Files and Changes
+  // are pinned project resources; real file tabs are workspace-scoped siblings.
+  const fileBrowserMounted = createMemo(
+    () =>
+      !!props.fileBrowserState &&
+      (settings.general.newLayoutDesigns() ? activeTab() === "files" : openFileOpen()),
+  )
+  const fileBrowserVisible = createMemo(() =>
+    settings.general.newLayoutDesigns() ? activeTab() === "files" : activeTab() === SESSION_OPEN_FILE_TAB,
+  )
+
+  createEffect(() => {
+    if (!settings.general.newLayoutDesigns()) return
+    if (fileOpen()) {
+      openReviewPanel()
+      const requested = fileTreeTab() === "changes" ? "changes" : "files"
+      untrack(() => tabs().setActive(requested))
+      return
+    }
+    if (!reviewOpen()) return
+    const active = tabs().active()
+    if (active === "files" || active === "changes" || active === "context") return
+    if (active && file.pathFromTab(active)) return
+    tabs().setActive("changes")
   })
-  // Keep the file-browser shell mounted while any file tab exists. Kobalte briefly
-  // selects Review while the tab For replaces a preview trigger, which would
-  // otherwise dispose the sidebar and reset scroll.
-  const fileBrowserMounted = createMemo(() => {
-    if (!props.fileBrowserState) return false
-    return openedTabs().length > 0 || openFileOpen() || !!browserTab()
-  })
-  const fileBrowserVisible = createMemo(() => {
-    const active = activeTab()
-    return active !== "review" && active !== "context" && active !== "empty"
-  })
-  const openFileKeybind = createMemo(() => command.keybindParts("file.open"))
   const closeTabKeybind = createMemo(() => command.keybindParts("tab.close"))
   const [store, setStore] = createStore({
     activeDraggable: undefined as string | undefined,
@@ -288,7 +313,7 @@ export function SessionSidePanel(props: {
   })
 
   return (
-    <Show when={isDesktop() && !(settings.general.newLayoutDesigns() && !params.id)}>
+    <Show when={isDesktop()}>
       <aside
         id="review-panel"
         aria-label={language.t("session.panel.reviewAndFiles")}
@@ -304,7 +329,7 @@ export function SessionSidePanel(props: {
           "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
             !props.size.active() && !props.reviewSnap,
           "rounded-[10px] shadow-[var(--v2-elevation-raised)] overflow-hidden": settings.general.newLayoutDesigns(),
-          "flex-1": reviewOpen(),
+          "flex-1": reviewOpen() || (settings.general.newLayoutDesigns() && open()),
         }}
         style={{ width: panelWidth() }}
       >
@@ -545,154 +570,107 @@ export function SessionSidePanel(props: {
                       }}
                     >
                       <Tabs value={activeTab()} onChange={activateTab}>
-                        <div class="session-review-v2-tabs-bar sticky top-0 shrink-0 flex items-center">
-                          <Tabs.List
-                            ref={(el: HTMLDivElement) => {
-                              tabList = el
-                              const stop = createFileTabListSync({ el, contextOpen })
-                              onCleanup(stop)
-                            }}
-                          >
-                            <Show when={props.reviewSidebarToggle}>
-                              {(toggle) => (
-                                <div class="session-review-v2-sidebar-toggle-slot h-full shrink-0 sticky left-0 z-10 flex items-center justify-center bg-v2-background-bg-base">
-                                  {toggle()(activeTab() === SESSION_OPEN_FILE_TAB)}
-                                </div>
-                              )}
-                            </Show>
-                            <Show when={reviewTab() && props.canReview()}>
-                              <Tabs.Trigger
-                                value="review"
-                                id={reviewTabID}
-                                aria-controls={activeTab() === "review" ? reviewTabPanelID : undefined}
-                              >
-                                {props.hasReview()
-                                  ? language.t("session.review.filesChanged", { count: props.reviewCount() })
-                                  : language.t("session.tab.review")}
-                              </Tabs.Trigger>
-                            </Show>
-                            <Show when={contextOpen()}>
-                              <Tabs.Trigger
-                                value="context"
-                                closeButton={
-                                  <TooltipV2
-                                    value={
-                                      <>
-                                        {language.t("common.closeTab")}
-                                        <Show when={closeTabKeybind().length > 0}>
-                                          <KeybindV2 keys={closeTabKeybind()} variant="neutral" />
-                                        </Show>
-                                      </>
-                                    }
-                                    placement="bottom"
-                                    gutter={10}
-                                  >
-                                    <IconButton
-                                      icon="close-small"
-                                      variant="ghost"
-                                      class="h-5 w-5"
-                                      onClick={() => tabs().close("context")}
-                                      aria-label={language.t("common.closeTab")}
-                                    />
-                                  </TooltipV2>
-                                }
-                                hideCloseButton
-                                onMiddleClick={() => tabs().close("context")}
-                              >
-                                <div class="flex items-center gap-2">
-                                  <SessionContextUsage variant="indicator" />
-                                  <div>{language.t("session.tab.context")}</div>
-                                </div>
-                              </Tabs.Trigger>
-                            </Show>
-                            <For each={panelTabs()}>
-                              {(tab) => (
-                                <Show
-                                  when={tab === SESSION_OPEN_FILE_TAB}
-                                  fallback={
-                                    <SortableTabV2
-                                      tab={tab}
-                                      index={() => tabs().all().indexOf(tab)}
-                                      temporary={temporaryTab() === tab}
-                                      onTabClose={tabs().close}
-                                      onTabDoubleClick={temporaryTab() === tab ? openTab : undefined}
-                                    />
-                                  }
-                                >
-                                  <Tabs.Trigger
-                                    value={SESSION_OPEN_FILE_TAB}
-                                    closeButton={
-                                      <TooltipV2
-                                        value={
-                                          <>
-                                            {language.t("common.closeTab")}
-                                            <Show when={closeTabKeybind().length > 0}>
-                                              <KeybindV2 keys={closeTabKeybind()} variant="neutral" />
-                                            </Show>
-                                          </>
-                                        }
-                                        placement="bottom"
-                                        gutter={10}
-                                      >
-                                        <IconButton
-                                          icon="close-small"
-                                          variant="ghost"
-                                          class="h-5 w-5"
-                                          onClick={() => tabs().close(SESSION_OPEN_FILE_TAB)}
-                                          aria-label={language.t("common.closeTab")}
-                                        />
-                                      </TooltipV2>
-                                    }
-                                    hideCloseButton
-                                    onMiddleClick={() => tabs().close(SESSION_OPEN_FILE_TAB)}
-                                  >
-                                    <div class="flex items-center gap-1.5 italic">
-                                      <Icon name="open-file" size="small" />
-                                      <span>{language.t("command.file.open")}</span>
-                                    </div>
-                                  </Tabs.Trigger>
-                                </Show>
-                              )}
-                            </For>
+                        <ProjectTabStrip
+                          role="tablist"
+                          ariaLabel={language.t("session.panel.reviewAndFiles")}
+                          listRef={(el) => {
+                            tabList = el
+                            const stop = createFileTabListSync({ el, contextOpen })
+                            onCleanup(stop)
+                          }}
+                          end={
                             <div
-                              class="h-full shrink-0 sticky right-0 z-10 flex items-center justify-center"
-                              classList={{
-                                "bg-v2-background-bg-base": settings.general.newLayoutDesigns(),
-                                "bg-background-stronger": !settings.general.newLayoutDesigns(),
-                              }}
+                              class="session-review-v2-open-in-app-slot flex items-center"
+                              onPointerDown={(event) => event.stopPropagation()}
+                              onClick={(event) => event.stopPropagation()}
                             >
-                              <TooltipV2
-                                value={
-                                  <>
-                                    {language.t("command.file.open")}
-                                    <Show when={openFileKeybind().length > 0}>
-                                      <KeybindV2 keys={openFileKeybind()} variant="neutral" />
-                                    </Show>
-                                  </>
-                                }
-                                placement="bottom"
-                                class="flex items-center"
-                              >
-                                <IconButtonV2
-                                  icon={<Icon name="plus-small" />}
-                                  variant="ghost-muted"
-                                  size="large"
-                                  onClick={() => openFileBrowser()}
-                                  aria-label={language.t("command.file.open")}
-                                />
-                              </TooltipV2>
+                              <OpenInAppV2 directory={projectDirectory} />
                             </div>
-                          </Tabs.List>
-                          <div
-                            class="session-review-v2-open-in-app-slot shrink-0 flex items-center pr-3"
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={(event) => event.stopPropagation()}
+                          }
+                        >
+                          <ProjectTab
+                            role="tab"
+                            active={activeTab() === "files"}
+                            onSelect={() => activateTab("files")}
                           >
-                            <OpenInAppV2 directory={projectDirectory} />
-                          </div>
-                        </div>
+                            <span class="min-w-0 truncate">{language.t("palette.group.files")}</span>
+                          </ProjectTab>
 
-                        <Show when={reviewTab() && props.canReview() && activeTab() === "review"}>
+                          <ProjectTab
+                            role="tab"
+                            active={activeTab() === "changes"}
+                            ariaControls={activeTab() === "changes" ? reviewTabPanelID : undefined}
+                            onSelect={() => activateTab("changes")}
+                          >
+                            <span class="min-w-0 truncate">{language.t("session.review.change.other")}</span>
+                            <Show when={props.reviewCount() > 0}>
+                              <span class="shrink-0 text-v2-text-text-faint">{props.reviewCount()}</span>
+                            </Show>
+                          </ProjectTab>
+
+                          <Show when={contextOpen()}>
+                            <ProjectTab
+                              role="tab"
+                              active={activeTab() === "context"}
+                              onSelect={() => activateTab("context")}
+                              onClose={() => tabs().close("context")}
+                              closeLabel={language.t("common.closeTab")}
+                              closeTooltip={
+                                <>
+                                  {language.t("common.closeTab")}
+                                  <Show when={closeTabKeybind().length > 0}>
+                                    <KeybindV2 keys={closeTabKeybind()} variant="neutral" />
+                                  </Show>
+                                </>
+                              }
+                              onMiddleClick={() => tabs().close("context")}
+                            >
+                              <SessionContextUsage variant="indicator" />
+                              <span class="min-w-0 truncate">{language.t("session.tab.context")}</span>
+                            </ProjectTab>
+                          </Show>
+
+                          <For each={panelTabs()}>
+                            {(tab) => (
+                              <Show
+                                when={tab === SESSION_OPEN_FILE_TAB}
+                                fallback={
+                                  <SortableTabV2
+                                    tab={tab}
+                                    index={() => tabs().all().indexOf(tab)}
+                                    active={activeTab() === tab}
+                                    temporary={temporaryTab() === tab}
+                                    onSelect={activateTab}
+                                    onTabClose={tabs().close}
+                                    onTabDoubleClick={temporaryTab() === tab ? openTab : undefined}
+                                  />
+                                }
+                              >
+                                <ProjectTab
+                                  role="tab"
+                                  active={activeTab() === SESSION_OPEN_FILE_TAB}
+                                  onSelect={() => activateTab(SESSION_OPEN_FILE_TAB)}
+                                  onClose={() => tabs().close(SESSION_OPEN_FILE_TAB)}
+                                  closeLabel={language.t("common.closeTab")}
+                                  closeTooltip={
+                                    <>
+                                      {language.t("common.closeTab")}
+                                      <Show when={closeTabKeybind().length > 0}>
+                                        <KeybindV2 keys={closeTabKeybind()} variant="neutral" />
+                                      </Show>
+                                    </>
+                                  }
+                                  onMiddleClick={() => tabs().close(SESSION_OPEN_FILE_TAB)}
+                                >
+                                  <Icon name="open-file" size="small" />
+                                  <span class="min-w-0 truncate italic">{language.t("command.file.open")}</span>
+                                </ProjectTab>
+                              </Show>
+                            )}
+                          </For>
+                        </ProjectTabStrip>
+
+                        <Show when={activeTab() === "changes"}>
                           <div
                             id={reviewTabPanelID}
                             role="tabpanel"
@@ -726,6 +704,24 @@ export function SessionSidePanel(props: {
                           </Tabs.Content>
                         </Show>
 
+                        <Show when={activeFileTab()} keyed>
+                          {(tab) => {
+                            const path = file.pathFromTab(tab)
+                            const changed = () => !!path && diffFiles().includes(path)
+
+                            return (
+                              <Show
+                                when={changed() && path && props.reviewFilePanel}
+                                fallback={<FileTabContent tab={tab} />}
+                              >
+                                <Tabs.Content value={tab} class="flex flex-col h-full overflow-hidden contain-strict">
+                                  {props.reviewFilePanel!(path!)}
+                                </Tabs.Content>
+                              </Show>
+                            )
+                          }}
+                        </Show>
+
                         <Show when={fileBrowserMounted()}>
                           <div
                             id={fileBrowserTabPanelID}
@@ -736,11 +732,9 @@ export function SessionSidePanel(props: {
                             inert={!fileBrowserVisible() || undefined}
                           >
                             <SessionFileBrowserTab
-                              tab={browserTab() ?? activeFileTab() ?? SESSION_OPEN_FILE_TAB}
-                              placeholder={
-                                (browserTab() ?? activeFileTab() ?? SESSION_OPEN_FILE_TAB) === SESSION_OPEN_FILE_TAB
-                              }
-                              active={file.pathFromTab(browserTab() ?? activeFileTab() ?? "")}
+                              tab={settings.general.newLayoutDesigns() ? "files" : SESSION_OPEN_FILE_TAB}
+                              placeholder
+                              listOnly
                               kinds={kinds()}
                               state={props.fileBrowserState!}
                               onSelect={(path) => previewTab(file.tab(path))}
@@ -756,7 +750,7 @@ export function SessionSidePanel(props: {
               </div>
             </Show>
 
-            <Show when={fileOpen()}>
+            <Show when={fileOpen() && !settings.general.newLayoutDesigns()}>
               <div
                 id="file-tree-panel"
                 class="relative min-w-0 h-full shrink-0 overflow-hidden"
@@ -849,7 +843,11 @@ export function SessionSidePanel(props: {
                       edge="start"
                       size={fileTreeWidth()}
                       min={FILE_TREE_WIDTH_MIN}
-                      max={480}
+                      max={
+                        typeof window === "undefined"
+                          ? 720
+                          : Math.max(360, Math.min(720, window.innerWidth * 0.45))
+                      }
                       onResize={(width) => {
                         props.size.touch()
                         layout.fileTree.resize(width)

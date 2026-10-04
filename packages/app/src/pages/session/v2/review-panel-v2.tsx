@@ -34,6 +34,7 @@ import { applyFileListKeyDown, SessionFileListV2 } from "@/pages/session/v2/sess
 type ReviewDiff = FileDiffInfo | SnapshotFileDiff | VcsFileDiff
 
 export type ReviewPanelV2Props = {
+  layout?: "split" | "list" | "preview"
   title?: JSX.Element
   empty?: JSX.Element
   diffs: () => ReviewDiff[]
@@ -109,66 +110,75 @@ export function ReviewPanelV2(props: ReviewPanelV2Props) {
         return undefined
       })
 
-  return (
-    <SessionReviewV2
+  const sidebar = (fill = false) => (
+    <ReviewPanelV2Sidebar
+      fill={fill}
       title={props.title}
-      stats={<DiffChanges changes={diffs()} />}
-      empty={props.empty}
-      sidebarOpen={props.state.sidebarOpened()}
-      sidebar={
-        // Always mounted: the sidebar header hosts the changes-mode dropdown,
-        // which must stay reachable when the current mode has zero diffs.
-        <ReviewPanelV2Sidebar
-          title={props.title}
-          state={props.state}
-          diffsReady={props.diffsReady}
-          onSelectFile={props.onSelectFile}
-          diffs={diffs}
-          filteredFiles={filteredFiles}
-          searching={searching}
-          kinds={treeKinds}
-          activeDiff={activeDiff}
-        />
-      }
-      activeFile={activeDiff()}
-      files={filteredFiles()}
+      state={props.state}
+      diffsReady={props.diffsReady}
       onSelectFile={props.onSelectFile}
-      diffStyle={props.diffStyle}
-      onDiffStyleChange={props.onDiffStyleChange}
-      expandMode={props.state.expandMode()}
-      onExpandModeChange={props.state.setExpandMode}
-      hasDiffs={diffs().length > 0}
-      preview={
-        // Key on the file path, not the diff object identity, so refreshed diff data
-        // updates the mounted preview instead of remounting the whole viewer.
-        <Show when={activeDiff()} keyed>
-          {(file) => (
-            <Show when={activeItem()}>
-              {(diff) => (
-                <SessionReviewFilePreviewV2
-                  file={file}
-                  diff={diff()}
-                  diffStyle={props.diffStyle}
-                  expandMode={props.state.expandMode()}
-                  readFile={readFile}
-                  onLineComment={props.onLineComment}
-                  onLineCommentUpdate={props.onLineCommentUpdate}
-                  onLineCommentDelete={props.onLineCommentDelete}
-                  lineCommentActions={props.lineCommentActions}
-                  comments={props.comments}
-                  focusedComment={props.focusedComment}
-                  onFocusedCommentChange={props.onFocusedCommentChange}
-                />
-              )}
-            </Show>
+      diffs={diffs}
+      filteredFiles={filteredFiles}
+      searching={searching}
+      kinds={treeKinds}
+      activeDiff={activeDiff}
+    />
+  )
+
+  const preview = () => (
+    // Key on the file path, not the diff object identity, so refreshed diff data
+    // updates the mounted preview instead of remounting the whole viewer.
+    <Show when={activeDiff()} keyed>
+      {(file) => (
+        <Show when={activeItem()}>
+          {(diff) => (
+            <SessionReviewFilePreviewV2
+              file={file}
+              diff={diff()}
+              diffStyle={props.diffStyle}
+              expandMode={props.state.expandMode()}
+              readFile={readFile}
+              onLineComment={props.onLineComment}
+              onLineCommentUpdate={props.onLineCommentUpdate}
+              onLineCommentDelete={props.onLineCommentDelete}
+              lineCommentActions={props.lineCommentActions}
+              comments={props.comments}
+              focusedComment={props.focusedComment}
+              onFocusedCommentChange={props.onFocusedCommentChange}
+            />
           )}
         </Show>
-      }
-    />
+      )}
+    </Show>
+  )
+
+  return (
+    <Show
+      when={props.layout !== "list"}
+      fallback={<div class="size-full min-h-0 overflow-hidden">{sidebar(true)}</div>}
+    >
+      <SessionReviewV2
+        title={props.title}
+        stats={<DiffChanges changes={diffs()} />}
+        empty={props.empty}
+        sidebarOpen={props.layout === "preview" ? false : props.state.sidebarOpened()}
+        sidebar={props.layout === "preview" ? undefined : sidebar()}
+        activeFile={activeDiff()}
+        files={filteredFiles()}
+        onSelectFile={props.onSelectFile}
+        diffStyle={props.diffStyle}
+        onDiffStyleChange={props.onDiffStyleChange}
+        expandMode={props.state.expandMode()}
+        onExpandModeChange={props.state.setExpandMode}
+        hasDiffs={diffs().length > 0}
+        preview={preview()}
+      />
+    </Show>
   )
 }
 
 function ReviewPanelV2Sidebar(props: {
+  fill?: boolean
   title?: JSX.Element
   state: ReviewPanelV2State
   diffsReady: () => boolean
@@ -200,7 +210,8 @@ function ReviewPanelV2Sidebar(props: {
 
   return (
     <SessionReviewV2Sidebar
-      open={props.state.sidebarOpened()}
+      open={props.fill ? true : props.state.sidebarOpened()}
+      fill={props.fill}
       transition={props.state.sidebarTransition()}
       title={props.title}
       stats={<DiffChanges changes={props.diffs()} />}

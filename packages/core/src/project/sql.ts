@@ -11,6 +11,7 @@ export const ProjectTable = sqliteTable("project", {
   icon_url: text(),
   icon_url_override: text(),
   icon_color: text(),
+  icon_shape: text(),
   ...Timestamps,
   time_initialized: integer(),
   sandboxes: DatabasePath.absoluteArrayColumn().notNull(),

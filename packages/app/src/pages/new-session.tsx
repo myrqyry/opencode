@@ -42,7 +42,12 @@ export default function NewSessionPage() {
       {suspendUntilPromptReady()}
       <NewSessionStatus mount={rightMount} visible={settings.visibility.status} />
       <div class="flex-1 min-h-0 flex flex-col gap-2 p-2">
-        <NewSessionView input={draft.input} project={project} workspace={workspace} />
+        <div
+          data-component="session-middle-panel"
+          class="flex-1 min-h-0 flex flex-col overflow-hidden rounded-[10px] bg-v2-background-bg-base shadow-[var(--v2-elevation-raised)]"
+        >
+          <NewSessionView input={draft.input} project={project} workspace={workspace} />
+        </div>
       </div>
     </div>
   )

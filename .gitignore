@@ -32,3 +32,7 @@ UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+
+# meristem:local-ignore:start
+.meristem/local/
+# meristem:local-ignore:end

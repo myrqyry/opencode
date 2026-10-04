@@ -31,6 +31,13 @@ const itWithoutExternalSkills = testEffect(
     testInstanceStoreLayer,
   ),
 )
+const itWithoutGlobalSkills = testEffect(
+  Layer.mergeAll(
+    LayerNode.compile(Skill.node, [[RuntimeFlags.node, RuntimeFlags.layer({ disableGlobalSkills: true })]]),
+    node,
+    testInstanceStoreLayer,
+  ),
+)
 
 async function createGlobalSkill(homeDir: string) {
   const skillDir = path.join(homeDir, ".claude", "skills", "global-test-skill")
@@ -400,6 +407,76 @@ This skill is loaded from the global home directory.
             expect(list[0].location).toContain(path.join(".agents", "skills", "global-agent-skill", "SKILL.md"))
           }).pipe(provideInstance(tmp.path))
         }),
+      )
+    }),
+  )
+
+  itWithoutGlobalSkills.live("hides implicit global skills while preserving project skills", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.acquireRelease(
+        Effect.promise(() => tmpdir({ git: false })),
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+      )
+      const project = yield* Effect.acquireRelease(
+        Effect.promise(() => tmpdir({ git: true })),
+        (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+      )
+
+      yield* Effect.promise(() =>
+        Promise.all([
+          Bun.write(
+            path.join(home.path, ".agents", "skills", "global-hidden", "SKILL.md"),
+            `---
+name: global-hidden
+description: This global skill should be hidden.
+---
+
+# Global hidden
+`,
+          ),
+          Bun.write(
+            path.join(home.path, ".opencode", "skills", "legacy-global-hidden", "SKILL.md"),
+            `---
+name: legacy-global-hidden
+description: This legacy global OpenCode skill should be hidden.
+---
+
+# Legacy global hidden
+`,
+          ),
+          Bun.write(
+            path.join(project.path, ".agents", "skills", "project-visible", "SKILL.md"),
+            `---
+name: project-visible
+description: This project skill should remain visible.
+---
+
+# Project visible
+`,
+          ),
+          Bun.write(
+            path.join(project.path, ".opencode", "skills", "project-opencode-visible", "SKILL.md"),
+            `---
+name: project-opencode-visible
+description: This project OpenCode skill should remain visible.
+---
+
+# Project OpenCode visible
+`,
+          ),
+        ]),
+      )
+
+      yield* withHome(
+        home.path,
+        Effect.gen(function* () {
+          const skill = yield* Skill.Service
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
+          expect(list.find((x) => x.name === "global-hidden")).toBeUndefined()
+          expect(list.find((x) => x.name === "legacy-global-hidden")).toBeUndefined()
+          expect(list.find((x) => x.name === "project-visible")).toBeDefined()
+          expect(list.find((x) => x.name === "project-opencode-visible")).toBeDefined()
+        }).pipe(provideInstance(project.path)),
       )
     }),
   )

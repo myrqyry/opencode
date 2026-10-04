@@ -2,6 +2,16 @@
   "$schema": "https://opencode.ai/desktop-theme.json",
   "name": "OC-2",
   "id": "oc-2",
+  "projectAccents": {
+    "pink": { "light": "#e4429e", "dark": "#8c2d61" },
+    "mauve": { "light": "#623be2", "dark": "#361f83" },
+    "red": { "light": "#d92e3c", "dark": "#7a1f23" },
+    "peach": { "light": "#ee7330", "dark": "#723d22" },
+    "yellow": { "light": "#e7af36", "dark": "#68552b" },
+    "green": { "light": "#2eaf5a", "dark": "#196130" },
+    "teal": { "light": "#0096b8", "dark": "#005a6e" },
+    "blue": { "light": "#3250df", "dark": "#263fa9" }
+  },
   "light": {
     "palette": {
       "neutral": "#f7f7f7",

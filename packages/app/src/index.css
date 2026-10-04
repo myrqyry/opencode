@@ -1,7 +1,31 @@
+@import "@fontsource-variable/bricolage-grotesque";
 @import "@opencode-ai/ui/styles/tailwind";
 @import "@opencode-ai/session-ui/styles";
 @import "@opencode-ai/ui/v2/styles/tailwind.css";
 @import "tw-animate-css";
+
+@theme inline {
+  /* Meristem semantic color layer. These utilities resolve against the local
+     project scope when one exists and gracefully fall back to the active theme. */
+  --color-project-canvas: var(--project-surface-deep, var(--meristem-theme-surface-canvas));
+  --color-project-surface: var(--project-surface-container, var(--meristem-theme-surface-soft));
+  --color-project-surface-high: var(--project-surface-container-high, var(--meristem-theme-surface-high));
+  --color-project-composer: var(--project-composer-surface, var(--meristem-theme-surface-soft));
+  --color-project-hover: var(--project-hover-surface, var(--meristem-theme-surface-hover));
+  --color-project-selected: var(--project-interactive-surface, var(--meristem-theme-surface-selected));
+  --color-project-selected-strong: var(
+    --project-interactive-strong,
+    var(--meristem-theme-surface-selected-strong)
+  );
+  --color-project-outline: var(--project-outline, var(--meristem-theme-outline));
+  --color-project-outline-strong: var(--project-outline-strong, var(--meristem-theme-outline-strong));
+  --color-project-accent: var(--project-accent, var(--v2-background-bg-accent));
+
+  --shadow-soft-control: var(--v2-elevation-button-neutral);
+  --shadow-soft-raised: var(--v2-elevation-raised);
+  --shadow-soft-floating: var(--v2-elevation-floating);
+  --shadow-soft-overlay: var(--v2-elevation-overlay);
+}
 
 @font-face {
   font-family: "JetBrainsMono Nerd Font Mono";
@@ -153,7 +177,7 @@
     margin: 1px;
     width: 12px;
     height: 12px;
-    border-radius: 9999px;
+    border-radius: var(--v2-shape-pill);
     border: 2px solid color-mix(in srgb, var(--v2-icon-icon-accent) 30%, transparent);
     border-top-color: var(--v2-icon-icon-accent);
     animation: titlebar-update-loader-spin 0.67s linear infinite;
@@ -326,5 +350,867 @@
       animation-timeline: --manage-models-scroll;
       animation-range: 0 0.1px;
     }
+  }
+}
+
+/* Meristem soft-material treatment for the V2 workspace. */
+@layer components {
+  body[data-new-layout] {
+    --meristem-soft-shadow: light-dark(rgba(39, 45, 58, 0.18), rgba(0, 0, 0, 0.46));
+    --meristem-soft-highlight: light-dark(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.065));
+    --v2-elevation-button-neutral:
+      2px 2px 5px var(--meristem-soft-shadow), -1px -1px 3px var(--meristem-soft-highlight),
+      inset 0 1px 0 var(--meristem-soft-highlight), inset 0 0 0 0.5px var(--v2-border-border-muted);
+    --v2-elevation-raised:
+      4px 5px 12px var(--meristem-soft-shadow), -2px -2px 7px var(--meristem-soft-highlight),
+      inset 0 1px 0 var(--meristem-soft-highlight);
+    --v2-elevation-floating:
+      8px 10px 24px color-mix(in srgb, var(--meristem-soft-shadow) 86%, transparent),
+      -2px -2px 8px var(--meristem-soft-highlight), inset 0 1px 0 var(--meristem-soft-highlight);
+    --v2-elevation-overlay:
+      12px 16px 38px color-mix(in srgb, var(--meristem-soft-shadow) 90%, transparent),
+      -3px -3px 10px var(--meristem-soft-highlight), inset 0 1px 0 var(--meristem-soft-highlight);
+  }
+
+  body[data-new-layout] :is([data-component="button-v2"], [data-component="icon-button-v2"]) {
+    border-radius: var(--v2-shape-surface);
+  }
+
+  body[data-new-layout]
+    :is(
+      [data-component="text-input-v2"],
+      [data-component="textarea-v2"],
+      [data-component="inline-input-v2"],
+      [data-component="select-v2"],
+      [data-component="segmented-control-v2"],
+      [data-component="accordion-v2"],
+      [data-component="file-tree-v2"]
+    ) {
+    border-radius: var(--v2-shape-surface);
+  }
+
+  body[data-new-layout]
+    :is(
+      [data-component="dialog-v2"] [data-slot="dialog-container"],
+      [data-component="menu-v2-content"],
+      [data-component="menu-v2-content"][data-slot="select-v2-content"],
+      [data-component="toast-v2"]
+    ) {
+    /* Dead value: the unlayered --v2-shape-sheet block below wins over this
+       layered tier, so this rule never applies. Kept only so the layered tier
+       stays legible. Safe to delete once the layered tier is removed. */
+    border-radius: var(--v2-shape-panel);
+  }
+
+  body[data-new-layout]
+    :is(
+      [data-component="button-v2"][data-variant="neutral"],
+      [data-component="icon-button-v2"][data-variant="neutral"]
+    ):active:not(:disabled) {
+    box-shadow:
+      inset 2px 2px 4px var(--meristem-soft-shadow),
+      inset -1px -1px 2px var(--meristem-soft-highlight);
+  }
+}
+
+/* Radius overrides are intentionally unlayered so they win over the V2 component sheets. */
+body[data-new-layout] [data-component="button-v2"],
+body[data-new-layout] [data-component="icon-button-v2"] {
+  border-radius: var(--v2-shape-surface);
+}
+
+body[data-new-layout] [data-component="button-v2"][data-size="small"],
+body[data-new-layout] [data-component="icon-button-v2"][data-size="small"] {
+  border-radius: var(--v2-shape-raised);
+}
+
+body[data-new-layout]
+  :is(
+    [data-component="text-input-v2"],
+    [data-component="textarea-v2"],
+    [data-component="inline-input-v2"],
+    [data-component="select-v2"],
+    [data-component="segmented-control-v2"],
+    [data-component="accordion-v2"],
+    [data-component="file-tree-v2"]
+  ) {
+  border-radius: var(--v2-shape-surface);
+}
+
+body[data-new-layout] [data-component="menu-v2-content"],
+body[data-new-layout] [data-component="menu-v2-content"][data-slot="select-v2-content"],
+body[data-new-layout] [data-component="dialog-v2"] [data-slot="dialog-container"],
+body[data-new-layout] [data-component="toast-v2"] {
+  border-radius: var(--v2-shape-sheet);
+}
+
+body[data-new-layout] [data-component="menu-v2-item"],
+body[data-new-layout] [data-slot="select-v2-listbox"] [data-component="menu-v2-item"] {
+  border-radius: var(--v2-shape-raised);
+}
+
+
+/* A compact identity/category shade ladder: broad surfaces stay quiet while hover,
+   selection and outlines progressively carry more of the active project/theme color.
+   Status meaning stays on the stable --v2-state-* tokens and is never derived from project tint. */
+body[data-new-layout] {
+  --meristem-theme-surface-canvas: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 2.5%,
+    var(--v2-background-bg-deep)
+  );
+  --meristem-theme-surface-soft: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 4.5%,
+    var(--v2-background-bg-base)
+  );
+  --meristem-theme-surface-high: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 7%,
+    var(--v2-background-bg-layer-01)
+  );
+  --meristem-theme-surface-hover: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 8%,
+    var(--v2-background-bg-layer-02)
+  );
+  --meristem-theme-surface-selected: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 14%,
+    var(--v2-background-bg-layer-03)
+  );
+  --meristem-theme-surface-selected-strong: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 20%,
+    var(--v2-background-bg-layer-03)
+  );
+  --meristem-theme-outline: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 32%,
+    var(--v2-border-border-muted)
+  );
+  --meristem-theme-outline-strong: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 48%,
+    var(--v2-border-border-base)
+  );
+}
+
+body[data-new-layout] [data-project-tint] {
+  --project-surface-deep: color-mix(in oklab, var(--project-accent) 3%, var(--v2-background-bg-deep));
+  --project-surface-container: color-mix(in oklab, var(--project-accent) 4.5%, var(--v2-background-bg-base));
+  --project-surface-container-high: color-mix(
+    in oklab,
+    var(--project-accent) 7%,
+    var(--v2-background-bg-layer-01)
+  );
+  --project-composer-surface: color-mix(in oklab, var(--project-accent) 6%, var(--v2-background-bg-base));
+  --project-hover-surface: color-mix(in oklab, var(--project-accent) 8%, var(--v2-background-bg-layer-02));
+  --project-interactive-surface: color-mix(
+    in oklab,
+    var(--project-accent) 14%,
+    var(--v2-background-bg-layer-03)
+  );
+  --project-interactive-strong: color-mix(
+    in oklab,
+    var(--project-accent) 20%,
+    var(--v2-background-bg-layer-03)
+  );
+  --project-outline: color-mix(in oklab, var(--project-accent) 32%, var(--v2-border-border-muted));
+  --project-outline-strong: color-mix(in oklab, var(--project-accent) 48%, var(--v2-border-border-base));
+}
+
+body[data-new-layout] [data-component="session-prompt-dock"] {
+  background: var(--project-surface-container, var(--meristem-theme-surface-soft));
+}
+
+body[data-new-layout] [data-component="prompt-input-v2"] {
+  background: var(--project-composer-surface, var(--meristem-theme-surface-soft));
+  outline: 1px solid color-mix(in oklab, var(--project-outline, var(--meristem-theme-outline)) 42%, transparent);
+  outline-offset: -1px;
+  transition:
+    background-color 180ms ease,
+    outline-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+body[data-new-layout] [data-component="prompt-input-v2"]:focus-within {
+  outline-color: var(--project-outline-strong, var(--meristem-theme-outline-strong));
+}
+
+body[data-new-layout] [data-slot="project-tab"][data-active="true"] {
+  background: var(--project-interactive-surface, var(--meristem-theme-surface-selected));
+}
+
+body[data-new-layout] [data-titlebar-project-tab][data-project-tint][data-active="true"] {
+  background: var(--project-interactive-strong);
+}
+
+body[data-new-layout] [data-titlebar-project-tab][data-project-tint]:not([data-active="true"]):hover {
+  background: var(--project-hover-surface);
+}
+
+body[data-new-layout]
+  [data-component="tabs-v2"][data-variant="normal"][data-orientation="horizontal"]
+  [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]) {
+  border-bottom-color: color-mix(
+    in oklab,
+    var(--v2-background-bg-accent) 58%,
+    var(--v2-text-text-faint)
+  );
+}
+
+body[data-new-layout]
+  [data-component="tabs-v2"][data-variant="pill"][data-orientation="horizontal"]
+  [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]) {
+  background-color: var(--meristem-theme-surface-selected);
+  border-color: var(--meristem-theme-outline);
+}
+
+/* Custom navigation surfaces should expose keyboard focus as clearly as stock V2 controls. */
+body[data-new-layout] [data-titlebar-tab]:has(> [data-slot="tab-link"]:focus-visible),
+body[data-new-layout]
+  [data-slot="project-tab"]:has(> button:not([data-component="icon-button-v2"]):focus-visible),
+body[data-new-layout]
+  :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]):focus-visible {
+  outline: 2px solid var(--v2-border-border-focus);
+  outline-offset: -2px;
+}
+
+/* Expressive motion hierarchy: routine feedback stays fast, state changes get room to read,
+   and pronounced settling is reserved for consequential layout/identity transitions. */
+body[data-new-layout] {
+  --meristem-motion-fast: 140ms;
+  --meristem-motion-state: 220ms;
+  --meristem-motion-layout: 320ms;
+  --meristem-motion-sidebar-fast: 180ms;
+  --meristem-motion-sidebar: 280ms;
+  --meristem-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --meristem-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --meristem-ease-sidebar: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes meristem-project-settle {
+  0% {
+    transform: scale(0.94);
+    filter: saturate(0.82);
+  }
+  58% {
+    transform: scale(1.025);
+    filter: saturate(1.08);
+  }
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes meristem-avatar-settle {
+  0% {
+    transform: scale(0.78) rotate(-6deg);
+  }
+  62% {
+    transform: scale(1.08) rotate(1.5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes meristem-chat-settle {
+  0% {
+    transform: scale(0.965);
+    border-radius: var(--v2-shape-sheet);
+    opacity: 0.78;
+  }
+  65% {
+    transform: scale(1.018);
+    border-radius: var(--v2-shape-panel);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    border-radius: var(--v2-shape-surface);
+    opacity: 1;
+  }
+}
+
+@keyframes meristem-resource-settle {
+  0% {
+    transform: scale(0.96);
+    filter: saturate(0.8);
+  }
+  70% {
+    transform: scale(1.018);
+    filter: saturate(1.08);
+  }
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes meristem-view-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(7px) scale(0.994);
+    filter: blur(0.7px);
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.001);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes meristem-unfold {
+  0% {
+    opacity: 0;
+    transform: translateY(-3px) scale(0.992);
+    clip-path: inset(0 0 18% 0 round 10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    clip-path: inset(0 0 0 0 round 10px);
+  }
+}
+
+@keyframes meristem-sidebar-enter {
+  0% {
+    opacity: 0.42;
+    transform: translateX(var(--meristem-sidebar-enter-x, -28px)) scale(0.992);
+  }
+  72% {
+    opacity: 1;
+    transform: translateX(2px) scale(1.001);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes meristem-sidebar-rail-enter {
+  0% {
+    opacity: 0.48;
+    transform: translateX(-14px) scale(0.97);
+  }
+  72% {
+    opacity: 1;
+    transform: translateX(1px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes meristem-resource-sidebar-enter {
+  0% {
+    opacity: 0.35;
+    transform: translateX(28px) scale(0.994);
+  }
+  72% {
+    opacity: 1;
+    transform: translateX(-2px) scale(1.001);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+body[data-new-layout] [data-titlebar-project-tab] {
+  transition:
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-state) var(--meristem-ease-standard),
+    filter var(--meristem-motion-state) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-titlebar-project-tab][data-motion="settle"] {
+  animation: meristem-project-settle var(--meristem-motion-layout) var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout]
+  [data-titlebar-project-tab][data-motion="settle"]
+  [data-slot="project-avatar-surface"] {
+  animation: meristem-avatar-settle 360ms var(--meristem-ease-emphasized);
+  transform-origin: center;
+}
+
+body[data-new-layout] [data-slot="project-tab"] {
+  transition:
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-state) var(--meristem-ease-standard),
+    transform var(--meristem-motion-fast) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-slot="project-tab"][data-motion="settle"] {
+  animation: meristem-chat-settle 280ms var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout] [data-slot="project-tab"] > [data-component="icon-button-v2"] {
+  transform: translateX(3px) scale(0.9);
+  transition:
+    opacity var(--meristem-motion-fast) var(--meristem-ease-standard),
+    transform var(--meristem-motion-state) var(--meristem-ease-emphasized),
+    background-color var(--meristem-motion-fast) var(--meristem-ease-standard);
+}
+
+body[data-new-layout]
+  [data-slot="project-tab"]:is(:hover, :focus-within)
+  > [data-component="icon-button-v2"] {
+  transform: translateX(0) scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-new-layout] [data-slot="project-tab"]:not([data-active="true"]):hover {
+    transform: translateY(-1px);
+  }
+}
+
+body[data-new-layout] [data-slot="project-tab"]:active {
+  transform: translateY(0) scale(0.985);
+}
+
+body[data-new-layout] [data-slot="project-tab"] button > span[aria-hidden="true"] {
+  transition:
+    transform var(--meristem-motion-state) var(--meristem-ease-emphasized),
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-slot="project-tab"][data-active="true"] button > span[aria-hidden="true"] {
+  transform: scale(1.06);
+}
+
+body[data-new-layout]
+  [data-component="tabs-v2"]
+  [data-slot="tabs-v2-trigger-wrapper"] {
+  transition:
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    border-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-state) var(--meristem-ease-standard),
+    transform var(--meristem-motion-fast) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-slot="project-sessions"],
+body[data-new-layout] [data-slot="meristem-section-content"] {
+  transform-origin: top left;
+  animation: meristem-unfold var(--meristem-motion-sidebar) var(--meristem-ease-sidebar);
+}
+
+body[data-new-layout] [data-component="meristem-sidebar"] {
+  --meristem-sidebar-enter-x: -28px;
+  transform-origin: left center;
+  animation: meristem-sidebar-enter 320ms var(--meristem-ease-sidebar);
+}
+
+@media (max-width: 1279px) {
+  body[data-new-layout] [data-component="meristem-sidebar"] {
+    --meristem-sidebar-enter-x: -100%;
+  }
+}
+
+body[data-new-layout] [data-component="meristem-sidebar-rail"] {
+  transform-origin: left center;
+  animation: meristem-sidebar-rail-enter 240ms var(--meristem-ease-sidebar);
+}
+
+body[data-new-layout] #review-panel {
+  transform-origin: right center;
+  animation: meristem-resource-sidebar-enter 320ms var(--meristem-ease-sidebar);
+}
+
+body[data-new-layout]
+  :is(
+    [data-component="button-v2"],
+    [data-component="icon-button-v2"],
+    [data-action="prompt-submit"]
+  ) {
+  transition:
+    transform var(--meristem-motion-fast) var(--meristem-ease-standard),
+    background-color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-fast) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    border-color var(--meristem-motion-fast) var(--meristem-ease-standard);
+}
+
+body[data-new-layout]
+  :is(
+    [data-component="button-v2"],
+    [data-component="icon-button-v2"],
+    [data-action="prompt-submit"]
+  ):active:not(:disabled) {
+  transform: scale(0.955);
+}
+
+body[data-new-layout] [data-component="prompt-input-v2"] {
+  border-radius: var(--v2-shape-sheet);
+  transform-origin: center bottom;
+  transition:
+    border-radius var(--meristem-motion-layout) var(--meristem-ease-emphasized),
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    outline-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-layout) var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout] [data-component="prompt-input-v2"]:focus-within {
+  border-radius: var(--v2-shape-sheet-lift);
+  box-shadow:
+    5px 7px 18px color-mix(in srgb, var(--meristem-soft-shadow) 82%, transparent),
+    -2px -2px 7px var(--meristem-soft-highlight),
+    inset 0 1px 0 var(--meristem-soft-highlight);
+}
+
+body[data-new-layout] [data-action="prompt-submit"]:not(:disabled):hover {
+  box-shadow:
+    0 3px 8px color-mix(in srgb, var(--v2-background-bg-accent) 22%, transparent),
+    var(--v2-elevation-button-contrast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-new-layout] *,
+  body[data-new-layout] *::before,
+  body[data-new-layout] *::after {
+    scroll-behavior: auto !important;
+  }
+
+  body[data-new-layout]
+    :is(
+      [data-titlebar-project-tab][data-motion="settle"],
+      [data-titlebar-project-tab][data-motion="settle"] [data-slot="project-avatar-surface"],
+      [data-slot="project-tab"][data-motion="settle"],
+      [data-component="workspace-center-page"] > .workspace-center-page-inner,
+      [data-slot="project-sessions"],
+      [data-slot="meristem-section-content"],
+      [data-component="meristem-sidebar"],
+      [data-component="meristem-sidebar-rail"],
+      #review-panel
+    ) {
+    animation: none !important;
+  }
+
+  body[data-new-layout]
+    :is(
+      [data-component="button-v2"],
+      [data-component="icon-button-v2"],
+      [data-action="prompt-submit"]
+    ):active:not(:disabled) {
+    transform: none;
+  }
+
+  body[data-new-layout] [data-slot="project-tab"],
+  body[data-new-layout] [data-slot="project-tab"] > [data-component="icon-button-v2"],
+  body[data-new-layout] [data-slot="project-tab"] button > span[aria-hidden="true"] {
+    transform: none !important;
+    transition-duration: 80ms;
+  }
+
+  body[data-new-layout] [data-component="prompt-input-v2"] {
+    transition-duration: 80ms;
+  }
+}
+
+/* Cross-fade/settle the conversation surface itself when switching chat tabs. */
+body[data-new-layout] [data-component="session-middle-panel"] {
+  view-transition-name: meristem-middle-panel;
+}
+
+::view-transition-group(meristem-middle-panel) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--meristem-ease-emphasized, cubic-bezier(0.05, 0.7, 0.1, 1));
+}
+
+::view-transition-old(meristem-middle-panel) {
+  animation: meristem-middle-panel-out 170ms var(--meristem-ease-standard, cubic-bezier(0.2, 0, 0, 1)) both;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(meristem-middle-panel) {
+  animation: meristem-middle-panel-in 280ms var(--meristem-ease-emphasized, cubic-bezier(0.05, 0.7, 0.1, 1)) both;
+  mix-blend-mode: normal;
+}
+
+@keyframes meristem-middle-panel-out {
+  to {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.992);
+    filter: blur(0.6px);
+  }
+}
+
+@keyframes meristem-middle-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px) scale(0.988);
+    filter: blur(0.8px);
+  }
+  72% {
+    opacity: 1;
+    transform: translateX(-1px) scale(1.002);
+    filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+body[data-new-layout] [data-slot="file-browser-pathbar"] {
+  background: var(--project-surface-container-high, var(--meristem-theme-surface-high));
+  border-bottom-color: var(--project-outline, var(--meristem-theme-outline));
+}
+
+body[data-new-layout] [data-component="workspace-center-page"] > .workspace-center-page-inner {
+  transform-origin: top center;
+  animation: meristem-view-enter 260ms var(--meristem-ease-emphasized);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-new-layout] [data-component="session-middle-panel"] {
+    view-transition-name: none;
+  }
+
+  ::view-transition-old(meristem-middle-panel),
+  ::view-transition-new(meristem-middle-panel) {
+    animation: none;
+  }
+}
+
+
+/* Meristem interface-wide supporting motion. */
+body[data-new-layout] {
+  --meristem-motion-overlay: 240ms;
+}
+
+@keyframes meristem-overlay-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.965);
+    filter: blur(1.4px);
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.004);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes meristem-dialog-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    filter: blur(2px);
+  }
+  68% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.003);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes meristem-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes meristem-resource-panel-in {
+  0% {
+    opacity: 0;
+    transform: translateX(7px) scale(0.995);
+    filter: blur(0.7px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes meristem-content-unfold {
+  0% {
+    opacity: 0.2;
+    transform: translateY(-3px);
+    clip-path: inset(0 0 18% 0 round 10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0 round 10px);
+  }
+}
+
+body[data-new-layout] [data-component="menu-v2-content"]:not([data-closed]) {
+  animation: meristem-overlay-in var(--meristem-motion-overlay) var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout] [data-component="dialog-overlay"] {
+  animation: meristem-scrim-in var(--meristem-motion-state) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-component="dialog-v2"] [data-slot="dialog-container"] {
+  transform-origin: center;
+  animation: meristem-dialog-in var(--meristem-motion-layout) var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout] [data-component="toast-v2"] {
+  transform-origin: top right;
+  animation: meristem-overlay-in var(--meristem-motion-overlay) var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout] [data-component="menu-v2-item"] {
+  transition:
+    background-color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    transform var(--meristem-motion-fast) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-component="menu-v2-item"][data-highlighted] {
+  transform: translateX(2px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-new-layout]
+    :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+}
+
+body[data-new-layout]
+  :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):active {
+  transform: translateY(0) scale(0.955);
+}
+
+body[data-new-layout]
+  :is([data-component="text-input-v2"], [data-component="textarea-v2"], [data-component="inline-input-v2"]) {
+  transition:
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    border-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-state) var(--meristem-ease-standard),
+    outline-color var(--meristem-motion-state) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-slot="segmented-control-v2-item"] {
+  transition:
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    transform var(--meristem-motion-fast) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-state) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-slot="segmented-control-v2-item"][data-selected] {
+  transform: scale(1.02);
+}
+
+body[data-new-layout] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"] {
+  transition:
+    background-color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    transform var(--meristem-motion-fast) var(--meristem-ease-standard);
+  transform-origin: center left;
+}
+
+body[data-new-layout] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"]:focus-visible {
+  transform: translateX(2px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-new-layout] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"]:hover {
+    transform: translateX(2px);
+  }
+}
+
+body[data-new-layout] [data-component="file-tree-v2"] [data-slot="file-tree-v2-guide"] {
+  transition:
+    opacity var(--meristem-motion-state) var(--meristem-ease-standard),
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] #review-panel [data-slot="tabs-content"]:not(.hidden) {
+  transform-origin: center top;
+  animation: meristem-resource-panel-in var(--meristem-motion-state) var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout] [data-component="accordion-v2-content"][data-expanded] [data-slot="accordion-v2-content-inner"] {
+  transform-origin: top;
+  animation: meristem-content-unfold var(--meristem-motion-state) var(--meristem-ease-emphasized);
+}
+
+body[data-new-layout] [data-component="accordion-v2-trigger"] {
+  transition:
+    background-color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard);
+}
+
+body[data-new-layout] [data-component="accordion-v2-trigger"]:is(:hover, :focus-visible) {
+  background-color: var(--project-hover-surface, var(--meristem-theme-surface-hover));
+}
+
+body[data-new-layout] :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]) {
+  transition:
+    transform var(--meristem-motion-fast) var(--meristem-ease-standard),
+    background-color var(--meristem-motion-state) var(--meristem-ease-standard),
+    color var(--meristem-motion-fast) var(--meristem-ease-standard),
+    box-shadow var(--meristem-motion-state) var(--meristem-ease-standard);
+  transform-origin: center left;
+}
+
+body[data-new-layout]
+  :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]):focus-visible {
+  transform: translateX(2px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-new-layout]
+    :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]):hover {
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-new-layout] [data-component="menu-v2-content"]:not([data-closed]),
+  body[data-new-layout] [data-component="dialog-overlay"],
+  body[data-new-layout] [data-component="dialog-v2"] [data-slot="dialog-container"],
+  body[data-new-layout] [data-component="toast-v2"],
+  body[data-new-layout] #review-panel [data-slot="tabs-content"]:not(.hidden),
+  body[data-new-layout]
+    [data-component="accordion-v2-content"][data-expanded]
+    [data-slot="accordion-v2-content-inner"] {
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+
+  body[data-new-layout] [data-component="menu-v2-item"][data-highlighted],
+  body[data-new-layout]
+    :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):hover,
+  body[data-new-layout]
+    :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):active,
+  body[data-new-layout] [data-slot="segmented-control-v2-item"][data-selected],
+  body[data-new-layout] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"]:is(:hover, :focus-visible),
+  body[data-new-layout]
+    :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]):is(:hover, :focus-visible) {
+    transform: none !important;
   }
 }

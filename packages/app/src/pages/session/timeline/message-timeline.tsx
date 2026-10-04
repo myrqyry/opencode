@@ -329,7 +329,12 @@ export function MessageTimeline(props: {
     if (value) return value
     return language.t("command.session.new")
   })
-  const showHeader = createMemo(() => !!(titleValue() || parentID()))
+  // In the tabbed V2 layout the active chat tab is the session title.
+  // Keep the in-timeline header only for child sessions, where the parent/child
+  // breadcrumb still carries information that the tab itself cannot represent.
+  const showHeader = createMemo(() =>
+    settings.general.newLayoutDesigns() ? !!parentID() : !!(titleValue() || parentID()),
+  )
   const projection = createTimelineProjection({
     messages: sessionMessages,
     userMessages: () => props.userMessages,

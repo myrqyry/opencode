@@ -46,7 +46,11 @@ export const make = <A, E = never, R = never>(
 
 export const get = <A, E, R>(self: InstanceState<A, E, R>) =>
   Effect.gen(function* () {
-    return yield* ScopedCache.get(self.cache, yield* directory)
+    const dir = yield* directory
+    // InstanceState initialization is shared across concurrent request fibers.
+    // Keep the cache acquisition alive even if the caller disconnects so one
+    // aborted HTTP request cannot interrupt and poison a cold shared lookup.
+    return yield* ScopedCache.get(self.cache, dir).pipe(Effect.uninterruptible)
   })
 
 export const use = <A, E, R, B>(self: InstanceState<A, E, R>, select: (value: A) => B) => Effect.map(get(self), select)

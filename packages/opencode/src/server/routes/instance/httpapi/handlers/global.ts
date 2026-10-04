@@ -8,10 +8,13 @@ import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Effect, Queue } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerResponse } from "effect/unstable/http"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Sse from "effect/unstable/encoding/Sse"
 import { RootHttpApi } from "../api"
 import { GlobalUpgradeInput } from "../groups/global"
+
+const RESTART_EXIT_CODE = 75
+const restartable = () => process.env.OPENCODE_ALLOW_RESTART === "1"
 
 function eventData(data: unknown): Sse.Event {
   return {
@@ -64,7 +67,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
     const bridge = yield* EffectBridge.make()
 
     const health = Effect.fn("GlobalHttpApi.health")(function* () {
-      return { healthy: true as const, version: InstallationVersion }
+      return { healthy: true as const, version: InstallationVersion, pid: process.pid, restartable: restartable() }
     })
 
     const event = Effect.fn("GlobalHttpApi.event")(function* () {
@@ -84,6 +87,14 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
     const dispose = Effect.fn("GlobalHttpApi.dispose")(function* () {
       yield* disposeAllInstancesAndEmitGlobalDisposed()
       return true
+    })
+
+    const restart = Effect.fn("GlobalHttpApi.restart")(function* () {
+      if (!restartable()) return yield* new HttpApiError.Forbidden({})
+      yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true })
+      const pid = process.pid
+      setTimeout(() => process.exit(RESTART_EXIT_CODE), 250).unref()
+      return { restarting: true as const, pid }
     })
 
     const upgrade = Effect.fn("GlobalHttpApi.upgrade")(function* (ctx: { payload: typeof GlobalUpgradeInput.Type }) {
@@ -122,5 +133,6 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
       .handle("configUpdate", configUpdate)
       .handle("dispose", dispose)
       .handle("upgrade", upgrade)
+      .handle("restart", restart)
   }),
 )

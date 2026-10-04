@@ -5,7 +5,7 @@ import { LSP } from "@/lsp/lsp"
 import { Vcs } from "@/project/vcs"
 import { Skill } from "@/skill"
 import { Schema } from "effect"
-import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
+import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
 import {
@@ -40,14 +40,29 @@ export class ApiVcsApplyError extends Schema.ErrorClass<ApiVcsApplyError>("VcsAp
   { httpApiStatus: 400 },
 ) {}
 
+export class ApiVcsOperationError extends Schema.ErrorClass<ApiVcsOperationError>("VcsOperationError")(
+  {
+    name: Schema.Literal("VcsOperationError"),
+    data: Schema.Struct({
+      message: Schema.String,
+      reason: Schema.Literals(["non-git", "invalid-path", "empty-message", "nothing-staged", "failed"]),
+    }),
+  },
+  { httpApiStatus: 400 },
+) {}
+
 export const InstancePaths = {
   dispose: "/instance/dispose",
   path: "/path",
+  openDirectory: "/instance/open-directory",
   vcs: "/vcs",
   vcsStatus: "/vcs/status",
   vcsDiff: "/vcs/diff",
   vcsDiffRaw: "/vcs/diff/raw",
   vcsApply: "/vcs/apply",
+  vcsStage: "/vcs/stage",
+  vcsUnstage: "/vcs/unstage",
+  vcsCommit: "/vcs/commit",
   command: "/command",
   agent: "/agent",
   skill: "/skill",
@@ -78,6 +93,18 @@ export const InstanceApi = HttpApi.make("instance")
             summary: "Get paths",
             description:
               "Retrieve the current working directory and related path information for the OpenCode instance.",
+          }),
+        ),
+        HttpApiEndpoint.post("openDirectory", InstancePaths.openDirectory, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Directory open request accepted"),
+          error: Schema.Union([HttpApiError.Forbidden, HttpApiError.InternalServerError]),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "instance.openDirectory",
+            summary: "Open instance directory",
+            description:
+              "Open the current instance directory in the host operating system file manager when host-open support is enabled.",
           }),
         ),
         HttpApiEndpoint.get("vcs", InstancePaths.vcs, {
@@ -134,6 +161,42 @@ export const InstanceApi = HttpApi.make("instance")
             identifier: "vcs.apply",
             summary: "Apply VCS patch",
             description: "Apply a raw patch to the current working tree.",
+          }),
+        ),
+        HttpApiEndpoint.post("vcsStage", InstancePaths.vcsStage, {
+          query: WorkspaceRoutingQuery,
+          payload: Vcs.FilesInput,
+          success: described(Vcs.ChangeResult, "VCS files staged"),
+          error: ApiVcsOperationError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "vcs.stage",
+            summary: "Stage VCS files",
+            description: "Stage the selected working-tree files in the git index.",
+          }),
+        ),
+        HttpApiEndpoint.post("vcsUnstage", InstancePaths.vcsUnstage, {
+          query: WorkspaceRoutingQuery,
+          payload: Vcs.FilesInput,
+          success: described(Vcs.ChangeResult, "VCS files unstaged"),
+          error: ApiVcsOperationError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "vcs.unstage",
+            summary: "Unstage VCS files",
+            description: "Remove the selected files from the git index while preserving working-tree changes.",
+          }),
+        ),
+        HttpApiEndpoint.post("vcsCommit", InstancePaths.vcsCommit, {
+          query: WorkspaceRoutingQuery,
+          payload: Vcs.CommitInput,
+          success: described(Vcs.CommitResult, "VCS commit created"),
+          error: ApiVcsOperationError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "vcs.commit",
+            summary: "Commit staged VCS changes",
+            description: "Create a git commit from the current index without staging additional files.",
           }),
         ),
         HttpApiEndpoint.get("command", InstancePaths.command, {

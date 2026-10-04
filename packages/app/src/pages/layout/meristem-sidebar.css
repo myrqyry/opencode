@@ -1,0 +1,152 @@
+[data-meristem-project][data-project-tint] {
+  background: color-mix(in oklab, var(--project-accent) 4%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--project-accent) 34%, transparent);
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+[data-meristem-project][data-project-tint][data-expanded="true"] {
+  background: color-mix(in oklab, var(--project-accent) 7%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--project-accent) 62%, transparent);
+}
+
+[data-meristem-project][data-project-tint] [data-slot="project-row"]:hover,
+[data-meristem-project][data-project-tint] [data-slot="project-row"]:focus-visible {
+  background: color-mix(in oklab, var(--project-accent) 10%, var(--v2-background-bg-deep));
+}
+
+[data-meristem-project][data-project-tint] [data-slot="project-row"][data-selected="true"] {
+  background: color-mix(in oklab, var(--project-accent) 14%, var(--v2-background-bg-deep));
+  color: var(--v2-text-text-base);
+}
+
+[data-meristem-project][data-project-tint] [data-slot="project-sessions"] {
+  border-color: color-mix(in oklab, var(--project-accent) 42%, var(--v2-border-border-muted));
+}
+
+[data-meristem-project][data-project-tint] [data-slot="project-sessions"] > button:hover,
+[data-meristem-project][data-project-tint] [data-slot="project-sessions"] > button:focus-visible {
+  background: color-mix(in oklab, var(--project-accent) 11%, var(--v2-background-bg-deep));
+}
+
+[data-meristem-project][data-project-tint] [data-slot="project-sessions"] .rounded-full {
+  background: color-mix(in oklab, var(--project-accent) 74%, var(--v2-icon-icon-muted));
+}
+
+
+/* Custom navigator controls use the same unmistakable keyboard focus treatment as V2 controls. */
+body[data-new-layout]
+  :is(
+    [data-slot="meristem-section-toggle"],
+    [data-slot="meristem-sidebar-row"],
+    [data-slot="project-row"],
+    [data-slot="collapsed-project-button"]
+  ):focus-visible,
+body[data-new-layout] [data-slot="project-sessions"] > button:focus-visible,
+body[data-new-layout] [data-slot="project-actions"] button:focus-visible {
+  outline: 2px solid var(--v2-border-border-focus);
+  outline-offset: -2px;
+}
+
+/* Supporting motion for the workspace navigator. */
+body[data-new-layout] [data-slot="meristem-section-toggle"],
+body[data-new-layout] [data-slot="meristem-sidebar-row"],
+body[data-new-layout] [data-meristem-project] [data-slot="project-row"],
+body[data-new-layout] [data-slot="collapsed-project-button"] {
+  transition:
+    transform var(--meristem-motion-sidebar-fast) var(--meristem-ease-sidebar),
+    background-color var(--meristem-motion-state) var(--meristem-ease-sidebar),
+    color var(--meristem-motion-sidebar-fast) var(--meristem-ease-sidebar),
+    box-shadow var(--meristem-motion-state) var(--meristem-ease-sidebar);
+  transform-origin: center left;
+}
+
+body[data-new-layout] [data-slot="meristem-sidebar-row"]:focus-visible,
+body[data-new-layout] [data-meristem-project] [data-slot="project-row"]:focus-visible {
+  transform: translateX(2px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-new-layout] [data-slot="meristem-sidebar-row"]:hover,
+  body[data-new-layout] [data-meristem-project] [data-slot="project-row"]:hover {
+    transform: translateX(2px);
+  }
+}
+
+body[data-new-layout] [data-slot="meristem-sidebar-row"]:active,
+body[data-new-layout] [data-meristem-project] [data-slot="project-row"]:active {
+  transform: translateX(1px) scale(0.985);
+}
+
+body[data-new-layout] [data-slot="meristem-sidebar-row"] > span:first-child,
+body[data-new-layout] [data-slot="collapsed-project-button"] [data-slot="project-avatar-surface"] {
+  transition: transform var(--meristem-motion-sidebar-fast) var(--meristem-ease-sidebar);
+}
+
+body[data-new-layout] [data-slot="meristem-section-chevron"],
+body[data-new-layout] [data-slot="project-chevron"] {
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform var(--meristem-motion-sidebar-fast) var(--meristem-ease-sidebar);
+}
+
+body[data-new-layout] [data-slot="meristem-section-toggle"][aria-expanded="true"] [data-slot="meristem-section-chevron"],
+body[data-new-layout] [data-slot="project-row"][aria-expanded="true"] [data-slot="project-chevron"] {
+  transform: rotate(90deg);
+}
+
+body[data-new-layout] [data-slot="meristem-sidebar-row"]:focus-visible > span:first-child {
+  transform: scale(1.08);
+}
+
+body[data-new-layout] [data-slot="collapsed-project-button"]:focus-visible {
+  transform: scale(1.07);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-new-layout] [data-slot="meristem-sidebar-row"]:hover > span:first-child {
+    transform: scale(1.08);
+  }
+
+  body[data-new-layout] [data-slot="collapsed-project-button"]:hover {
+    transform: scale(1.07);
+  }
+}
+
+body[data-new-layout] [data-slot="collapsed-project-button"]:active {
+  transform: scale(0.94);
+}
+
+body[data-new-layout] [data-slot="project-actions"] {
+  transform: translate(5px, -50%) scale(0.94);
+  transform-origin: right center;
+  transition:
+    opacity var(--meristem-motion-sidebar-fast) var(--meristem-ease-sidebar),
+    transform var(--meristem-motion-sidebar-fast) var(--meristem-ease-sidebar);
+}
+
+body[data-new-layout] .group\/project:is(:hover, :focus-within) [data-slot="project-actions"] {
+  transform: translate(0, -50%) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-new-layout] [data-slot="meristem-section-toggle"],
+  body[data-new-layout] [data-slot="meristem-sidebar-row"],
+  body[data-new-layout] [data-meristem-project] [data-slot="project-row"],
+  body[data-new-layout] [data-slot="collapsed-project-button"],
+  body[data-new-layout] [data-slot="meristem-sidebar-row"] > span:first-child {
+    transition-duration: 80ms;
+    transform: none !important;
+  }
+
+  body[data-new-layout] [data-slot="project-actions"] {
+    transition-duration: 80ms;
+    transform: translateY(-50%) !important;
+  }
+
+  body[data-new-layout] [data-slot="meristem-section-chevron"],
+  body[data-new-layout] [data-slot="project-chevron"] {
+    transition-duration: 0ms;
+  }
+}

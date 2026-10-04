@@ -1,5 +1,5 @@
 import type { ServerConnection } from "./server"
-import type { Tab } from "./tabs"
+import { WORKSPACE_VIEWS, type Tab } from "./tabs"
 
 export function migrateTabs(value: unknown, fallback: ServerConnection.Key): Tab[] {
   if (!Array.isArray(value)) return []
@@ -17,6 +17,14 @@ export function migrateTabs(value: unknown, fallback: ServerConnection.Key): Tab
       (tab.worktree === undefined || typeof tab.worktree === "string")
     ) {
       return [{ type: tab.type, server, draftID: tab.draftID, directory: tab.directory, worktree: tab.worktree }]
+    }
+    if (
+      tab.type === "workspace" &&
+      typeof tab.directory === "string" &&
+      typeof tab.view === "string" &&
+      WORKSPACE_VIEWS.includes(tab.view as (typeof WORKSPACE_VIEWS)[number])
+    ) {
+      return [{ type: tab.type, server, directory: tab.directory, view: tab.view as (typeof WORKSPACE_VIEWS)[number] }]
     }
     return []
   })

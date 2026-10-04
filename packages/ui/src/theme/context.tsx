@@ -5,6 +5,7 @@ import { createStore } from "solid-js/store"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createSimpleContext } from "../context/helper"
 import oc2ThemeJson from "./themes/oc-2.json"
+import { projectAccentColor, projectAccentEntries } from "./project-accents"
 import { resolveThemeVariant, themeToCss } from "./resolve"
 import { resolveThemeVariantV2, themeV2ToCss } from "./v2/resolve"
 import type { DesktopTheme } from "./types"
@@ -313,10 +314,22 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       setStore("mode", scheme === "system" ? getSystemMode() : scheme)
     }
 
+    const activeThemeId = () => store.previewThemeId ?? store.themeId
+    const activeMode = (): "light" | "dark" => {
+      const scheme = store.previewScheme
+      if (!scheme) return store.mode
+      return scheme === "system" ? getSystemMode() : scheme
+    }
+    const activeTheme = () => store.themes[activeThemeId()] ?? store.themes[store.themeId] ?? oc2Theme
+
     return {
       themeId: () => store.themeId,
+      activeThemeId,
       colorScheme: () => store.colorScheme,
       mode: () => store.mode,
+      activeMode,
+      projectAccents: () => projectAccentEntries(activeTheme(), activeMode()),
+      projectAccent: (id: string) => projectAccentColor(activeTheme(), activeMode(), id),
       ids,
       name: (id: string) => store.themes[id]?.name ?? names[id] ?? id,
       loadThemes,

@@ -9,10 +9,15 @@ export const ID = ProjectID
 export type ID = typeof ID.Type
 
 export const Vcs = Schema.Literal("git").annotate({ identifier: "Project.Vcs" })
+export const IconShape = Schema.Literals(["circle", "squircle", "rounded", "arch", "leaf", "gem"]).annotate({
+  identifier: "Project.IconShape",
+})
+export type IconShape = typeof IconShape.Type
 export const Icon = Schema.Struct({
   url: optional(Schema.String),
   override: optional(Schema.String),
   color: optional(Schema.String),
+  shape: optional(IconShape),
 }).annotate({ identifier: "Project.Icon" })
 export interface Icon extends Schema.Schema.Type<typeof Icon> {}
 export const Commands = Schema.Struct({

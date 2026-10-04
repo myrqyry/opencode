@@ -28,7 +28,7 @@ import { useLanguage } from "@/context/language"
 import { useSettings } from "@/context/settings"
 import { WindowsAppMenu } from "./windows-app-menu"
 import { applyPath, backPath, forwardPath } from "./titlebar-history"
-import { TitlebarTabStrip } from "@/components/titlebar-tab-strip"
+import { TitlebarProjectStrip } from "@/components/titlebar-project-strip"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createMediaQuery } from "@solid-primitives/media"
 import { readSessionTabsRemovedDetail, SESSION_TABS_REMOVED_EVENT } from "@/components/titlebar-session-events"
@@ -73,6 +73,7 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
   const params = useParams()
   const useV2Titlebar = createMemo(() => settings.general.newLayoutDesigns())
   const mobile = createMediaQuery("(max-width: 767px)")
+  const sidebarOverlay = createMediaQuery("(max-width: 1279px)")
   const bottom = createMemo(() => useV2Titlebar() && mobile() && settings.general.mobileTitlebarPosition() === "bottom")
 
   const mac = createMemo(() => platform.platform === "desktop" && platform.os === "macos")
@@ -173,7 +174,7 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
       data-slot={useV2Titlebar() ? "titlebar-v2" : undefined}
       classList={{
         "shrink-0 relative flex flex-row": true,
-        "h-9 bg-v2-background-bg-deep overflow-visible": useV2Titlebar(),
+        "h-9 border-b border-v2-border-border-muted bg-v2-background-bg-deep overflow-visible": useV2Titlebar(),
         "h-10 bg-background-base overflow-hidden": !useV2Titlebar(),
         "order-last": bottom(),
       }}
@@ -217,6 +218,15 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
               if (route.type === "home") return
               if (route.type === "draft") {
                 return tabsStore.find((item) => item.type === "draft" && item.draftID === route.draftID)
+              }
+              if (route.type === "workspace") {
+                return tabsStore.find(
+                  (item) =>
+                    item.type === "workspace" &&
+                    item.server === route.server &&
+                    item.directory === route.directory &&
+                    item.view === route.view,
+                )
               }
               if (route.type === "session") {
                 const main = tabsStore.find(
@@ -279,6 +289,10 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
               if (activeTab?.type === "draft") {
                 const model = tabs.stateValue<PromptSession>(activeTab, "prompt")?.model.current()
                 tabs.newDraft({ server: activeTab.server, directory: activeTab.directory }, "", model)
+                return
+              }
+              if (activeTab?.type === "workspace") {
+                tabs.newDraft({ server: activeTab.server, directory: activeTab.directory }, "")
                 return
               }
 
@@ -356,59 +370,59 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
               ].filter((v) => v !== undefined)
             })
 
-            const [tabsAreOverflowing, setTabsAreOverflowing] = createSignal(false)
-
             return (
               <div
                 class="h-full flex-1 overflow-hidden flex flex-row items-center gap-1.5 px-2 md:pr-3"
                 classList={{
-                  "pt-2": !bottom(),
-                  "pb-2": bottom(),
                   "md:pl-2": macTrafficLights(),
                   "md:pl-4": !macTrafficLights(),
                 }}
+                style={{
+                  "padding-left":
+                    !sidebarOverlay() && !layout.sidebar.opened()
+                      ? `${Math.max(
+                          0,
+                          Math.min(
+                            Math.max(200, layout.sidebar.width()),
+                            typeof window === "undefined"
+                              ? 720
+                              : Math.max(320, Math.min(720, window.innerWidth * 0.45)),
+                          ) - 48,
+                        ) + (macTrafficLights() ? 8 : 16)}px`
+                      : undefined,
+                }}
               >
-                <ChannelIndicator debugTools={props.debugTools} />
-                <Show when={windows() || linux()}>
-                  <WindowsAppMenu command={command} platform={platform} variant="v2" />
-                </Show>
-                <TooltipV2
-                  placement="bottom"
-                  value={
-                    <>
-                      {language.t("home.title")}
-                      <KeybindV2 keys={command.keybindParts("home.toggle")} variant="neutral" />
-                    </>
-                  }
-                  class="shrink-0"
-                >
+                <Show when={sidebarOverlay()}>
                   <IconButtonV2
                     type="button"
                     variant="ghost-muted"
                     size="large"
                     class="!w-9 shrink-0"
-                    icon={<IconV2 name="grid-plus" />}
-                    state={layout.route().type === "home" ? "pressed" : undefined}
-                    onClick={toggleHome}
-                    aria-label={language.t("home.title")}
-                    aria-pressed={layout.route().type === "home"}
+                    icon={<IconV2 name="sidebar-left" />}
+                    state={layout.mobileSidebar.opened() ? "pressed" : undefined}
+                    onClick={layout.mobileSidebar.toggle}
+                    aria-label={language.t("command.sidebar.toggle")}
+                    aria-expanded={layout.mobileSidebar.opened()}
                   />
-                </TooltipV2>
-
-                <TitlebarTabStrip
+                </Show>
+                <TitlebarProjectStrip
                   tabs={tabsStore}
                   currentTab={currentTab}
-                  forceTruncate={tabsAreOverflowing()}
-                  onOverflowChange={setTabsAreOverflowing}
-                  onNavigate={(tab, el) => {
-                    tabs.select(tab)
-                    el?.scrollIntoView({ behavior: "instant" })
-                  }}
-                  onClose={(tab) => {
-                    const index = tabsStore.findIndex((item) => tabKey(item) === tabKey(tab))
-                    if (index !== -1) tabsStoreActions.closeTab(index)
-                  }}
-                  onReorder={(keys) => tabsStoreActions.reorder(keys)}
+                  onNavigate={(tab) => tabs.select(tab)}
+                  onCloseGroup={(groupTabs) => tabsStoreActions.closeTabs(groupTabs.map(tabKey))}
+                  collapsedContextWidth={
+                    !sidebarOverlay() && !layout.sidebar.opened()
+                      ? Math.max(
+                          0,
+                          Math.min(
+                            Math.max(200, layout.sidebar.width()),
+                            typeof window === "undefined"
+                              ? 720
+                              : Math.max(320, Math.min(720, window.innerWidth * 0.45)),
+                          ) - 48,
+                        )
+                      : undefined
+                  }
                 />
                 <TooltipV2
                   placement="bottom"
@@ -431,6 +445,7 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
                 </TooltipV2>
                 <div class="flex-1" />
                 <TitlebarV2Right state={v2RightState()} />
+                <ChannelIndicator debugTools={props.debugTools} />
               </div>
             )
           }}
@@ -651,7 +666,8 @@ function ChannelIndicator(props: { debugTools?: { visible: boolean; toggle: () =
     return (
       <button
         type="button"
-        class="bg-icon-interactive-base text-[#FFF] font-medium px-2 rounded-sm uppercase font-mono cursor-pointer"
+        data-slot="channel-indicator"
+        class="flex h-5 items-center rounded-[6px] border border-v2-border-border-muted bg-v2-background-bg-layer-01 px-1.5 text-[9px] font-[650] uppercase tracking-[0.08em] text-v2-text-text-faint opacity-70 transition-opacity hover:opacity-100 cursor-pointer"
         onClick={props.debugTools.toggle}
         aria-label="Toggle debug tools"
         aria-pressed={props.debugTools.visible}
@@ -664,7 +680,10 @@ function ChannelIndicator(props: { debugTools?: { visible: boolean; toggle: () =
   return (
     <>
       {["beta", "dev"].includes(channel) && (
-        <div class="bg-icon-interactive-base text-[#FFF] font-medium px-2 rounded-sm uppercase font-mono">
+        <div
+          data-slot="channel-indicator"
+          class="flex h-5 items-center rounded-[6px] border border-v2-border-border-muted bg-v2-background-bg-layer-01 px-1.5 text-[9px] font-[650] uppercase tracking-[0.08em] text-v2-text-text-faint opacity-70"
+        >
           {channel.toUpperCase()}
         </div>
       )}

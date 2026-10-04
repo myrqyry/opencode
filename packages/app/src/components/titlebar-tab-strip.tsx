@@ -364,6 +364,8 @@ export function TitlebarTabStrip(props: {
                   )
                 }
 
+                if (tab.type === "workspace") return null
+
                 return (
                   <DraftTabSlot
                     tab={tab}

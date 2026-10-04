@@ -46,7 +46,7 @@ import { ServerSyncProvider, useServerSync } from "@/context/server-sync"
 import { GlobalProvider, useGlobal } from "@/context/global"
 import { HighlightsProvider } from "@/context/highlights"
 import { LanguageProvider, type Locale, useLanguage } from "@/context/language"
-import { LayoutProvider } from "@/context/layout"
+import { LayoutProvider, useLayout } from "@/context/layout"
 import { ModelsProvider } from "@/context/models"
 import { NotificationProvider } from "@/context/notification"
 import { PermissionProvider } from "@/context/permission"
@@ -54,7 +54,7 @@ import { usePlatform } from "@/context/platform"
 import { PromptProvider } from "@/context/prompt"
 import { ServerConnection, ServerProvider, serverName, useServer } from "@/context/server"
 import { SettingsProvider, useSettings } from "@/context/settings"
-import { TabsProvider, useTabs, type DraftTab } from "@/context/tabs"
+import { TabsProvider, useTabs, type DraftTab, type WorkspaceTab } from "@/context/tabs"
 import { SDKProvider, useSDK } from "@/context/sdk"
 import { WslServersProvider } from "@/wsl/context"
 import DirectoryLayout, { DirectoryDataProvider } from "@/pages/directory-layout"
@@ -70,6 +70,7 @@ import { NewHome } from "@/pages/home"
 import { LegacyHome } from "@/pages/home/legacy-home"
 
 const NewSession = lazy(() => import("@/pages/new-session"))
+const WorkspacePage = lazy(() => import("@/pages/workspace"))
 
 const SessionRoute = () => {
   const settings = useSettings()
@@ -202,6 +203,62 @@ function DraftRoute() {
           </Show>
         )}
       </Show>
+    </Show>
+  )
+}
+
+function WorkspaceRoute() {
+  const layout = useLayout()
+  const tabs = useTabs()
+  const tab = createMemo(() => {
+    const route = layout.route()
+    if (route.type !== "workspace") return
+    return tabs.store.find(
+      (item): item is WorkspaceTab =>
+        item.type === "workspace" &&
+        item.server === route.server &&
+        item.directory === route.directory &&
+        item.view === route.view,
+    )
+  })
+
+  return (
+    <Show when={tab()} keyed fallback={<Navigate href="/" />}>
+      {(workspace) => <ResolvedWorkspaceRoute tab={workspace} />}
+    </Show>
+  )
+}
+
+function ResolvedWorkspaceRoute(props: { tab: WorkspaceTab }) {
+  const global = useGlobal()
+  const conn = createMemo(() =>
+    global.servers.list().find((item) => ServerConnection.key(item) === props.tab.server),
+  )
+  const directory = () => props.tab.directory
+
+  return (
+    <Show when={`${props.tab.server}\0${props.tab.directory}`} keyed>
+      <ServerSDKProvider server={conn}>
+        <ServerSyncProvider server={conn}>
+          <ModelsProvider directory={directory}>
+            <SDKProvider directory={directory}>
+              <DirectoryDataProvider directory={props.tab.directory} server={() => props.tab.server}>
+                <FileProvider>
+                  <PromptProvider>
+                    <CommentsProvider>
+                      <WorkspacePage
+                        view={props.tab.view}
+                        server={props.tab.server}
+                        directory={props.tab.directory}
+                      />
+                    </CommentsProvider>
+                  </PromptProvider>
+                </FileProvider>
+              </DirectoryDataProvider>
+            </SDKProvider>
+          </ModelsProvider>
+        </ServerSyncProvider>
+      </ServerSDKProvider>
     </Show>
   )
 }
@@ -639,6 +696,7 @@ function Routes(props: { serverScoped?: JSX.Element }) {
         <Route path="/" component={NewHome} />
         <Route path="/:dir/session/:id" component={NewLayoutLegacySessionRedirect} />
         <Route path="/server/:serverKey/session/:id" component={TargetSessionRoute} />
+        <Route path="/workspace/:serverKey/:dir/:view" component={WorkspaceRoute} />
       </Show>
       <Route path="/new-session" component={DraftRoute} />
     </>

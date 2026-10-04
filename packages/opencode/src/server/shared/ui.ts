@@ -2,6 +2,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Stream } from "effect"
 import { HttpBody, HttpClient, HttpClientRequest, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { createHash } from "node:crypto"
+import path from "node:path"
 import { ProxyUtil } from "../proxy-util"
 
 let embeddedUIPromise: Promise<Record<string, string> | null> | undefined
@@ -52,6 +53,14 @@ function notFound() {
   return HttpServerResponse.jsonUnsafe({ error: "Not Found" }, { status: 404 })
 }
 
+function localUIPath(root: string, requestPath: string) {
+  const base = path.resolve(root)
+  const relative = requestPath.replace(/^\/+/, "")
+  const candidate = path.resolve(base, relative || "index.html")
+  if (candidate !== base && !candidate.startsWith(base + path.sep)) return
+  return candidate
+}
+
 function embeddedUIResponse(file: string, body: Uint8Array) {
   const mime = FSUtil.mimeType(file)
   const headers = new Headers({ "content-type": mime })
@@ -59,6 +68,23 @@ function embeddedUIResponse(file: string, body: Uint8Array) {
     headers.set("content-security-policy", cspForHtml(new TextDecoder().decode(body)))
   }
   return HttpServerResponse.raw(body, { headers })
+}
+
+export function serveLocalUIEffect(requestPath: string, fs: FSUtil.Interface, root: string) {
+  const file = localUIPath(root, requestPath)
+  if (!file) return Effect.succeed(notFound())
+
+  const response = (target: string) => fs.readFile(target).pipe(Effect.map((body) => embeddedUIResponse(target, body)))
+  const fallback = path.join(path.resolve(root), "index.html")
+
+  return response(file).pipe(
+    Effect.catchReason("PlatformError", "NotFound", () => {
+      if (path.extname(requestPath)) return Effect.succeed(notFound())
+      return response(fallback).pipe(
+        Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(notFound())),
+      )
+    }),
+  )
 }
 
 export function serveEmbeddedUIEffect(
@@ -80,13 +106,16 @@ export function serveUIEffect(
   services: { fs: FSUtil.Interface; client: HttpClient.HttpClient; disableEmbeddedWebUi: boolean },
 ) {
   return Effect.gen(function* () {
-    const embeddedWebUI = yield* Effect.promise(() => embeddedUI(services.disableEmbeddedWebUi))
-    const path = new URL(request.url, "http://localhost").pathname
+    const requestPath = new URL(request.url, "http://localhost").pathname
+    const localWebUI = process.env.OPENCODE_WEB_UI_DIR
 
-    if (embeddedWebUI) return yield* serveEmbeddedUIEffect(path, services.fs, embeddedWebUI)
+    if (localWebUI) return yield* serveLocalUIEffect(requestPath, services.fs, localWebUI)
+
+    const embeddedWebUI = yield* Effect.promise(() => embeddedUI(services.disableEmbeddedWebUi))
+    if (embeddedWebUI) return yield* serveEmbeddedUIEffect(requestPath, services.fs, embeddedWebUI)
 
     const response = yield* services.client.execute(
-      HttpClientRequest.make(request.method)(upstreamURL(path), {
+      HttpClientRequest.make(request.method)(upstreamURL(requestPath), {
         headers: ProxyUtil.headers(request.headers, { host: UI_UPSTREAM.host }),
         body: requestBody(request),
       }),

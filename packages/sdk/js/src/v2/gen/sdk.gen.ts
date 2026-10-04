@@ -86,10 +86,14 @@ import type {
   GlobalEventResponses,
   GlobalHealthErrors,
   GlobalHealthResponses,
+  GlobalRestartErrors,
+  GlobalRestartResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
   InstanceDisposeErrors,
   InstanceDisposeResponses,
+  InstanceOpenDirectoryErrors,
+  InstanceOpenDirectoryResponses,
   LocationRef,
   LspStatusErrors,
   LspStatusResponses,
@@ -387,14 +391,20 @@ import type {
   V2SkillListResponses,
   VcsApplyErrors,
   VcsApplyResponses,
+  VcsCommitErrors,
+  VcsCommitResponses,
   VcsDiffErrors,
   VcsDiffRawErrors,
   VcsDiffRawResponses,
   VcsDiffResponses,
   VcsGetErrors,
   VcsGetResponses,
+  VcsStageErrors,
+  VcsStageResponses,
   VcsStatusErrors,
   VcsStatusResponses,
+  VcsUnstageErrors,
+  VcsUnstageResponses,
   WorktreeCreateErrors,
   WorktreeCreateInput,
   WorktreeCreateResponses,
@@ -1376,6 +1386,18 @@ export class Global extends HeyApiClient {
     })
   }
 
+  /**
+   * Restart opencode
+   *
+   * Request a supervised restart when the server was launched with restart support enabled.
+   */
+  public restart<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).post<GlobalRestartResponses, GlobalRestartErrors, ThrowOnError>({
+      url: "/global/restart",
+      ...options,
+    })
+  }
+
   private _config?: Config
   get config(): Config {
     return (this._config ??= new Config({ client: this.client }))
@@ -1952,6 +1974,40 @@ export class Instance extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Open instance directory
+   *
+   * Open the current instance directory in the host operating system file manager when host-open support is enabled.
+   */
+  public openDirectory<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      InstanceOpenDirectoryResponses,
+      InstanceOpenDirectoryErrors,
+      ThrowOnError
+    >({
+      url: "/instance/open-directory",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class Path extends HeyApiClient {
@@ -2088,7 +2144,7 @@ export class Vcs extends HeyApiClient {
     parameters: {
       directory?: string
       workspace?: string
-      mode: "git" | "branch"
+      mode: "git" | "branch" | "staged" | "unstaged"
       context?: number
     },
     options?: Options<never, ThrowOnError>,
@@ -2140,6 +2196,117 @@ export class Vcs extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<VcsApplyResponses, VcsApplyErrors, ThrowOnError>({
       url: "/vcs/apply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Stage VCS files
+   *
+   * Stage the selected working-tree files in the git index.
+   */
+  public stage<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      files?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "files" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<VcsStageResponses, VcsStageErrors, ThrowOnError>({
+      url: "/vcs/stage",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Unstage VCS files
+   *
+   * Remove the selected files from the git index while preserving working-tree changes.
+   */
+  public unstage<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      files?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "files" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<VcsUnstageResponses, VcsUnstageErrors, ThrowOnError>({
+      url: "/vcs/unstage",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Commit staged VCS changes
+   *
+   * Create a git commit from the current index without staging additional files.
+   */
+  public commit<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      message?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "message" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<VcsCommitResponses, VcsCommitErrors, ThrowOnError>({
+      url: "/vcs/commit",
       ...options,
       ...params,
       headers: {

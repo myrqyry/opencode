@@ -560,6 +560,18 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       },
     }),
     viewCommand({
+      id: "review.open",
+      title: language.t("command.review.toggle"),
+      hidden: true,
+      onSelect: () => view().reviewPanel.open(),
+    }),
+    viewCommand({
+      id: "review.close",
+      title: language.t("command.review.toggle"),
+      hidden: true,
+      onSelect: () => view().reviewPanel.close(),
+    }),
+    viewCommand({
       id: "review.toggle",
       title: language.t("command.review.toggle"),
       keybind: "mod+shift+r",

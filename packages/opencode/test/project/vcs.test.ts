@@ -237,6 +237,58 @@ describe("Vcs diff", () => {
   )
 
   it.instance(
+    "separates staged and unstaged changes and preserves both states for the same file",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* write(path.join(test.directory, "file.txt"), "original\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "add file"])
+        yield* write(path.join(test.directory, "file.txt"), "staged\n")
+
+        const vcs = yield* init()
+        expect((yield* vcs.diff("unstaged")).map((item) => item.file)).toEqual(["file.txt"])
+        expect(yield* vcs.diff("staged")).toEqual([])
+
+        yield* vcs.stage({ files: ["file.txt"] })
+        expect((yield* vcs.diff("staged")).map((item) => item.file)).toEqual(["file.txt"])
+        expect(yield* vcs.diff("unstaged")).toEqual([])
+
+        yield* write(path.join(test.directory, "file.txt"), "staged plus working\n")
+        expect((yield* vcs.diff("staged")).map((item) => item.file)).toEqual(["file.txt"])
+        expect((yield* vcs.diff("unstaged")).map((item) => item.file)).toEqual(["file.txt"])
+
+        yield* vcs.unstage({ files: ["file.txt"] })
+        expect(yield* vcs.diff("staged")).toEqual([])
+        expect((yield* vcs.diff("unstaged")).map((item) => item.file)).toEqual(["file.txt"])
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "commit creates a commit from the index without staging later working-tree edits",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* write(path.join(test.directory, "file.txt"), "original\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "add file"])
+        yield* write(path.join(test.directory, "file.txt"), "staged\n")
+
+        const vcs = yield* init()
+        yield* vcs.stage({ files: ["file.txt"] })
+        yield* write(path.join(test.directory, "file.txt"), "working\n")
+
+        const result = yield* vcs.commit({ message: "test staged commit" })
+
+        expect(result.hash).toHaveLength(40)
+        expect(yield* vcs.diff("staged")).toEqual([])
+        expect((yield* vcs.diff("unstaged")).map((item) => item.file)).toEqual(["file.txt"])
+      }),
+    { git: true },
+  )
+
+  it.instance(
     "diff('git') handles special filenames",
     () =>
       Effect.gen(function* () {

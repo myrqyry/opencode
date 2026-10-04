@@ -16,7 +16,7 @@ import { getWorkerPool } from "../../pierre/worker"
 import { SessionFilePanelV2, SessionFilePanelV2Empty } from "./session-file-panel-v2"
 
 export const SESSION_REVIEW_V2_SIDEBAR_WIDTH_DEFAULT = 240
-export const SESSION_REVIEW_V2_SIDEBAR_WIDTH_MIN = 200
+export const SESSION_REVIEW_V2_SIDEBAR_WIDTH_MIN = 160
 export const SESSION_REVIEW_V2_SIDEBAR_WIDTH_MAX = 480
 
 export type SessionReviewExpandMode = "expand" | "collapse"
@@ -55,6 +55,7 @@ export type SessionReviewV2SidebarProps = {
   onWidthChange?: (width: number) => void
   minWidth?: number
   maxWidth?: number
+  fill?: boolean
   viewportRef?: (element: HTMLDivElement) => void
   children?: JSX.Element
 }
@@ -74,18 +75,20 @@ export function SessionReviewV2Sidebar(props: SessionReviewV2SidebarProps) {
   })
 
   return (
-    <div data-component="session-review-v2-sidebar-root">
+    <div data-component="session-review-v2-sidebar-root" data-fill={props.fill ? "" : undefined}>
       <Show when={props.open}>
         <aside
           data-slot="session-review-v2-sidebar"
           data-transition={props.transition ? "" : undefined}
           data-resizing={resizing() ? "" : undefined}
-          style={{ width: `${width()}px` }}
+          style={{ width: props.fill ? "100%" : `${width()}px` }}
         >
-          <div data-slot="session-review-v2-sidebar-header">
-            <div data-slot="session-review-v2-sidebar-title">{props.title}</div>
-            {props.stats}
-          </div>
+          <Show when={props.title !== undefined || props.stats !== undefined}>
+            <div data-slot="session-review-v2-sidebar-header">
+              <div data-slot="session-review-v2-sidebar-title">{props.title}</div>
+              {props.stats}
+            </div>
+          </Show>
           <div data-slot="session-review-v2-sidebar-filter">
             <TextInputV2
               type="search"
@@ -132,7 +135,7 @@ export function SessionReviewV2Sidebar(props: SessionReviewV2SidebarProps) {
           </ScrollView>
         </aside>
       </Show>
-      <Show when={props.open && props.onWidthChange}>
+      <Show when={props.open && props.onWidthChange && !props.fill}>
         <div data-slot="session-review-v2-sidebar-resize" onPointerDown={() => setResizing(true)}>
           <ResizeHandle
             direction="horizontal"

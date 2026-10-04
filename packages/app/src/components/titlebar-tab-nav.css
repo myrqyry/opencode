@@ -15,6 +15,11 @@
   background: linear-gradient(var(--tab-overlay), var(--tab-overlay)), var(--tab-base);
 }
 
+[data-titlebar-tab][data-project-tint] {
+  --tab-base: color-mix(in oklab, var(--project-accent) 7%, var(--v2-background-bg-deep));
+  box-shadow: inset 0 -1px 0 color-mix(in oklab, var(--project-accent) 24%, transparent);
+}
+
 [data-titlebar-tab]:is(:hover, :has(> [data-slot="tab-link"]:focus-visible)):not([data-state="pressed"]):not(
     [data-dragging="true"]
   ):not([data-editing="true"]) {
@@ -22,9 +27,22 @@
   --tab-overlay: var(--v2-overlay-simple-overlay-hover);
 }
 
+[data-titlebar-tab][data-project-tint]:is(:hover, :has(> [data-slot="tab-link"]:focus-visible)):not(
+    [data-state="pressed"]
+  ):not([data-dragging="true"]):not([data-editing="true"]) {
+  --tab-base: color-mix(in oklab, var(--project-accent) 11%, var(--v2-background-bg-deep));
+  --tab-overlay: transparent;
+}
+
 [data-titlebar-tab]:is([data-state="pressed"], [data-dragging="true"], [data-editing="true"]) {
   --tab-base: var(--v2-background-bg-layer-02);
   --tab-overlay: var(--v2-overlay-simple-overlay-pressed);
+}
+
+[data-titlebar-tab][data-project-tint]:is([data-state="pressed"], [data-dragging="true"], [data-editing="true"]) {
+  --tab-base: color-mix(in oklab, var(--project-accent) 17%, var(--v2-background-bg-deep));
+  --tab-overlay: transparent;
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--project-accent) 62%, transparent);
 }
 
 [data-titlebar-tab]:is(:hover, [data-state="pressed"]) [data-slot="tab-close"] {

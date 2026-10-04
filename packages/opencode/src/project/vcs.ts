@@ -7,6 +7,7 @@ import { Git } from "@/git"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { VcsEvent } from "@opencode-ai/schema/vcs-event"
+import path from "node:path"
 
 const PATCH_CONTEXT_LINES = 2_147_483_647
 const MAX_PATCH_BYTES = 10_000_000
@@ -232,7 +233,121 @@ const track = Effect.fnUntraced(function* (
   return yield* diffAgainstRef(git, cwd, ref, options)
 })
 
-export const Mode = Schema.Literals(["git", "branch"])
+const statusFromCode = (code: string): Git.Kind => {
+  if (code === "??") return "added"
+  if (code.includes("A") && !code.includes("D")) return "added"
+  if (code.includes("D") && !code.includes("A")) return "deleted"
+  return "modified"
+}
+
+const parseDiffItems = (text: string) => {
+  const list = text.split("\0").filter(Boolean)
+  return list.flatMap((code, index) => {
+    if (index % 2 !== 0) return []
+    const file = list[index + 1]
+    if (!file) return []
+    return [{ file, code, status: statusFromCode(code) } satisfies Git.Item]
+  })
+}
+
+const parseDiffStats = (text: string) =>
+  text
+    .split("\0")
+    .filter(Boolean)
+    .flatMap((item) => {
+      const first = item.indexOf("\t")
+      const second = item.indexOf("\t", first + 1)
+      if (first === -1 || second === -1) return []
+      const file = item.slice(second + 1)
+      if (!file) return []
+      const additions = item.slice(0, first) === "-" ? 0 : Number.parseInt(item.slice(0, first) || "0", 10)
+      const deletions =
+        item.slice(first + 1, second) === "-" ? 0 : Number.parseInt(item.slice(first + 1, second) || "0", 10)
+      return [
+        {
+          file,
+          additions: Number.isFinite(additions) ? additions : 0,
+          deletions: Number.isFinite(deletions) ? deletions : 0,
+        } satisfies Git.Stat,
+      ]
+    })
+
+const scopedDiff = Effect.fnUntraced(function* (
+  git: Git.Interface,
+  cwd: string,
+  mode: "staged" | "unstaged",
+  options?: DiffOptions,
+) {
+  const cached = mode === "staged"
+  const prefix = cached ? ["diff", "--cached"] : ["diff"]
+  const [names, stats, patch, status] = yield* Effect.all(
+    [
+      git.run([...prefix, "--no-ext-diff", "--no-renames", "--name-status", "-z", "--", "."], { cwd }),
+      git.run([...prefix, "--no-ext-diff", "--no-renames", "--numstat", "-z", "--", "."], { cwd }),
+      git.run(
+        [
+          ...prefix,
+          "--patch",
+          "--no-ext-diff",
+          "--no-renames",
+          `--unified=${options?.context ?? PATCH_CONTEXT_LINES}`,
+          "--",
+          ".",
+        ],
+        { cwd, maxOutputBytes: MAX_TOTAL_PATCH_BYTES },
+      ),
+      git.status(cwd),
+    ],
+    { concurrency: 4 },
+  )
+
+  const tracked = parseDiffItems(names.text())
+  const list = cached
+    ? tracked
+    : merge(
+        tracked,
+        status.filter((item) => item.code === "??"),
+      )
+  const map = nums(parseDiffStats(stats.text()))
+  const chunks = splitGitPatch({ text: patch.text(), truncated: patch.truncated })
+  const patches = chunks.reduce((acc, chunk) => {
+    const file = fileFromPatchChunk(chunk)
+    if (file) acc.set(file, (acc.get(file) ?? "") + chunk)
+    return acc
+  }, new Map<string, string>())
+
+  const next: FileDiff[] = []
+  let total = 0
+  let capped = patch.truncated
+  for (const item of list.toSorted((a, b) => a.file.localeCompare(b.file))) {
+    const stat = map.get(item.file) ?? (item.code === "??" ? yield* git.statUntracked(cwd, item.file) : undefined)
+    const raw = capped
+      ? emptyPatch(item.file)
+      : item.code === "??"
+        ? (yield* git.patchUntracked(cwd, item.file, {
+            context: options?.context ?? PATCH_CONTEXT_LINES,
+            maxOutputBytes: MAX_PATCH_BYTES,
+          })).text
+        : (patches.get(item.file) ?? emptyPatch(item.file))
+    const result = totalPatch(item.file, raw, total)
+    capped = capped || result.capped
+    if (!capped) total += Buffer.byteLength(result.patch)
+    next.push({
+      file: item.file,
+      patch: result.patch,
+      additions: stat?.additions ?? 0,
+      deletions: stat?.deletions ?? 0,
+      status: item.status,
+    })
+  }
+  return next
+})
+
+const validPath = (file: string) => file.length > 0 && !path.isAbsolute(file) && !file.split(/[\\/]/).includes("..")
+
+const literalPathspec = (file: string) => `:(literal)${file}`
+
+export const Mode = Schema.Literals(["git", "branch", "staged", "unstaged"])
 export type Mode = Schema.Schema.Type<typeof Mode>
 
 export const Event = VcsEvent
@@ -273,6 +388,32 @@ export const ApplyResult = Schema.Struct({
 })
 export type ApplyResult = Schema.Schema.Type<typeof ApplyResult>
 
+export const FilesInput = Schema.Struct({
+  files: Schema.Array(Schema.String),
+})
+export type FilesInput = Schema.Schema.Type<typeof FilesInput>
+
+export const CommitInput = Schema.Struct({
+  message: Schema.String,
+})
+export type CommitInput = Schema.Schema.Type<typeof CommitInput>
+
+export const ChangeResult = Schema.Struct({
+  changed: Schema.Boolean,
+})
+export type ChangeResult = Schema.Schema.Type<typeof ChangeResult>
+
+export const CommitResult = Schema.Struct({
+  committed: Schema.Boolean,
+  hash: Schema.String,
+})
+export type CommitResult = Schema.Schema.Type<typeof CommitResult>
+
+export class OperationError extends Schema.TaggedErrorClass<OperationError>()("VcsOperationError", {
+  message: Schema.String,
+  reason: Schema.Literals(["non-git", "invalid-path", "empty-message", "nothing-staged", "failed"]),
+}) {}
+
 export class PatchApplyError extends Schema.TaggedErrorClass<PatchApplyError>()("VcsPatchApplyError", {
   message: Schema.String,
   reason: Schema.Literals(["non-git", "not-clean"]),
@@ -286,6 +427,9 @@ export interface Interface {
   readonly diff: (mode: Mode, options?: DiffOptions) => Effect.Effect<FileDiff[]>
   readonly diffRaw: () => Effect.Effect<string>
   readonly apply: (input: ApplyInput) => Effect.Effect<ApplyResult, PatchApplyError>
+  readonly stage: (input: FilesInput) => Effect.Effect<ChangeResult, OperationError>
+  readonly unstage: (input: FilesInput) => Effect.Effect<ChangeResult, OperationError>
+  readonly commit: (input: CommitInput) => Effect.Effect<CommitResult, OperationError>
 }
 
 interface State {
@@ -377,6 +521,9 @@ const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = 
         if (mode === "git") {
           return yield* track(git, ctx.directory, (yield* git.hasHead(ctx.directory)) ? "HEAD" : undefined, options)
         }
+        if (mode === "staged" || mode === "unstaged") {
+          return yield* scopedDiff(git, ctx.directory, mode, options)
+        }
 
         if (!value.root) return []
         if (value.current && value.current === value.root.name) return []
@@ -413,6 +560,99 @@ const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = 
           })
         }
         return { applied: true }
+      }),
+      stage: Effect.fn("Vcs.stage")(function* (input: FilesInput) {
+        const ctx = yield* InstanceState.context
+        if (ctx.project.vcs !== "git") {
+          return yield* new OperationError({
+            message: "Files can't be staged because the project is not git-based",
+            reason: "non-git",
+          })
+        }
+        if (input.files.length === 0) return { changed: false }
+        if (!input.files.every(validPath)) {
+          return yield* new OperationError({
+            message: "Files can't be staged because a path is outside the project",
+            reason: "invalid-path",
+          })
+        }
+
+        const result = yield* git.run(["add", "--", ...input.files.map(literalPathspec)], { cwd: ctx.directory })
+        if (result.exitCode !== 0) {
+          return yield* new OperationError({
+            message: result.stderr.toString("utf8").trim() || "Git failed to stage the selected files",
+            reason: "failed",
+          })
+        }
+        return { changed: true }
+      }),
+      unstage: Effect.fn("Vcs.unstage")(function* (input: FilesInput) {
+        const ctx = yield* InstanceState.context
+        if (ctx.project.vcs !== "git") {
+          return yield* new OperationError({
+            message: "Files can't be unstaged because the project is not git-based",
+            reason: "non-git",
+          })
+        }
+        if (input.files.length === 0) return { changed: false }
+        if (!input.files.every(validPath)) {
+          return yield* new OperationError({
+            message: "Files can't be unstaged because a path is outside the project",
+            reason: "invalid-path",
+          })
+        }
+
+        const files = input.files.map(literalPathspec)
+        const result = (yield* git.hasHead(ctx.directory))
+          ? yield* git.run(["restore", "--staged", "--", ...files], { cwd: ctx.directory })
+          : yield* git.run(["rm", "--cached", "-r", "-f", "--ignore-unmatch", "--", ...files], { cwd: ctx.directory })
+        if (result.exitCode !== 0) {
+          return yield* new OperationError({
+            message: result.stderr.toString("utf8").trim() || "Git failed to unstage the selected files",
+            reason: "failed",
+          })
+        }
+        return { changed: true }
+      }),
+      commit: Effect.fn("Vcs.commit")(function* (input: CommitInput) {
+        const ctx = yield* InstanceState.context
+        if (ctx.project.vcs !== "git") {
+          return yield* new OperationError({
+            message: "Changes can't be committed because the project is not git-based",
+            reason: "non-git",
+          })
+        }
+        const message = input.message.trim()
+        if (!message) {
+          return yield* new OperationError({
+            message: "Commit message can't be empty",
+            reason: "empty-message",
+          })
+        }
+
+        const staged = yield* git.run(["diff", "--cached", "--quiet", "--exit-code"], { cwd: ctx.directory })
+        if (staged.exitCode === 0) {
+          return yield* new OperationError({
+            message: "There are no staged changes to commit",
+            reason: "nothing-staged",
+          })
+        }
+        if (staged.exitCode !== 1) {
+          return yield* new OperationError({
+            message: staged.stderr.toString("utf8").trim() || "Git couldn't inspect the staged changes",
+            reason: "failed",
+          })
+        }
+
+        const result = yield* git.run(["commit", "-m", message], { cwd: ctx.directory })
+        if (result.exitCode !== 0) {
+          return yield* new OperationError({
+            message: result.stderr.toString("utf8").trim() || "Git failed to create the commit",
+            reason: "failed",
+          })
+        }
+        const hash = (yield* git.run(["rev-parse", "HEAD"], { cwd: ctx.directory })).text().trim()
+        return { committed: true, hash }
       }),
     })
   }),

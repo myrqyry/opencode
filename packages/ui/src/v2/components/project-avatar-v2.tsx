@@ -26,18 +26,37 @@ export const PROJECT_AVATAR_VARIANTS = [
 
 export type ProjectAvatarVariant = (typeof PROJECT_AVATAR_VARIANTS)[number]
 
+export const PROJECT_AVATAR_SHAPES = ["circle", "squircle", "rounded", "arch", "leaf", "gem"] as const
+export type ProjectAvatarShape = (typeof PROJECT_AVATAR_SHAPES)[number]
+
 // "outline" is a neutral, muted style (e.g. recently closed projects) and is not part of the color rotation.
-export type ProjectAvatarStyle = ProjectAvatarVariant | "outline"
+export type ProjectAvatarStyle = ProjectAvatarVariant | "outline" | `#${string}`
 
 export interface ProjectAvatarProps extends ComponentProps<"div"> {
   fallback: string
   src?: string
   variant?: ProjectAvatarStyle
+  shape?: ProjectAvatarShape
   unread?: boolean
 }
 
 export function ProjectAvatar(props: ProjectAvatarProps) {
-  const [split, rest] = splitProps(props, ["fallback", "src", "variant", "unread", "class", "classList", "style"])
+  const [split, rest] = splitProps(props, ["fallback", "src", "variant", "shape", "unread", "class", "classList", "style"])
+  const customColor = () => {
+    const value = split.variant
+    if (typeof value !== "string" || !/^#[0-9a-f]{6}$/i.test(value)) return
+    return value.toLowerCase()
+  }
+  const surfaceStyle = () => {
+    const base = typeof split.style === "object" ? split.style : {}
+    const color = customColor()
+    if (!color) return base
+    return {
+      ...base,
+      "--project-avatar-custom-bg": color,
+      "--project-avatar-custom-border": `color-mix(in srgb, ${color} 88%, #000000)`,
+    } as typeof base
+  }
   return (
     <div
       {...rest}
@@ -47,11 +66,12 @@ export function ProjectAvatar(props: ProjectAvatarProps) {
         ...split.classList,
         [split.class ?? ""]: !!split.class,
       }}
-      style={typeof split.style === "object" ? split.style : undefined}
+      style={surfaceStyle()}
     >
       <div
         data-slot="project-avatar-surface"
-        data-variant={split.variant ?? "gray"}
+        data-variant={customColor() ? "custom" : (split.variant ?? "gray")}
+        data-shape={split.shape ?? "circle"}
         data-has-image={split.src ? "" : undefined}
       >
         <Show when={split.src} fallback={first(split.fallback)}>

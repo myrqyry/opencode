@@ -41,10 +41,23 @@ export type ThemeVariant =
   | ({ seeds: ThemeSeedColors; palette?: never } & ThemeVariantBase)
   | ({ palette: ThemePaletteColors; seeds?: never } & ThemeVariantBase)
 
+export const PROJECT_ACCENT_SLOTS = ["pink", "mauve", "red", "peach", "yellow", "green", "teal", "blue"] as const
+export type ProjectAccentSlot = (typeof PROJECT_ACCENT_SLOTS)[number]
+
+export type ProjectAccentVariants = {
+  light: HexColor
+  dark: HexColor
+}
+
 export interface DesktopTheme {
   $schema?: string
   name: string
   id: string
+  /**
+   * Curated project identity colors. Keys are semantic slots (prefer the
+   * canonical PROJECT_ACCENT_SLOTS) and each slot carries light/dark values.
+   */
+  projectAccents?: Record<string, ProjectAccentVariants>
   light: ThemeVariant
   dark: ThemeVariant
 }

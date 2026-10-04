@@ -19,6 +19,28 @@
       "description": "Unique theme identifier (slug)",
       "pattern": "^[a-z0-9-]+$"
     },
+    "projectAccents": {
+      "type": "object",
+      "description": "Curated semantic project identity colors. Prefer canonical slots such as pink, mauve, red, peach, yellow, green, teal, and blue.",
+      "propertyNames": {
+        "pattern": "^[a-z0-9-]+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["light", "dark"],
+        "properties": {
+          "light": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "dark": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          }
+        }
+      }
+    },
     "light": {
       "$ref": "#/definitions/ThemeVariant",
       "description": "Light mode color variant"

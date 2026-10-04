@@ -17,6 +17,7 @@ import { useGlobal } from "@/context/global"
 import { useSettings } from "@/context/settings"
 import { useMcpToggle } from "@/context/mcp"
 import { useServerProtocol } from "@/context/server-sdk"
+import { useOpenCodeRestart } from "@/components/use-opencode-restart"
 
 const pluginEmptyMessage = (value: string, file: string): JSXElement => {
   const parts = value.split(file)
@@ -259,6 +260,7 @@ export function StatusPopoverBody(props: { shown: Accessor<boolean> }) {
   const navigate = useNavigate()
   const settings = useSettings()
   const protocol = useServerProtocol()
+  const restart = useOpenCodeRestart()
 
   const fail = (err: unknown) => {
     showToast({
@@ -303,17 +305,15 @@ export function StatusPopoverBody(props: { shown: Accessor<boolean> }) {
         aria-label={language.t("status.popover.ariaLabel")}
         class="tabs bg-background-strong rounded-xl overflow-hidden"
         data-component="tabs"
-        data-active={settings.general.newLayoutDesigns() ? "mcp" : "servers"}
-        defaultValue={settings.general.newLayoutDesigns() ? "mcp" : "servers"}
+        data-active="servers"
+        defaultValue="servers"
         variant="alt"
       >
         <Tabs.List data-slot="tablist" class="bg-transparent border-b-0 px-4 pt-2 pb-0 gap-4 h-10">
-          {!settings.general.newLayoutDesigns() && (
-            <Tabs.Trigger value="servers" data-slot="tab" class="text-12-regular">
-              {sortedServers().length > 0 ? `${sortedServers().length} ` : ""}
-              {language.t("status.popover.tab.servers")}
-            </Tabs.Trigger>
-          )}
+          <Tabs.Trigger value="servers" data-slot="tab" class="text-12-regular">
+            {sortedServers().length > 0 ? `${sortedServers().length} ` : ""}
+            {language.t("status.popover.tab.servers")}
+          </Tabs.Trigger>
           <Tabs.Trigger value="mcp" data-slot="tab" class="text-12-regular">
             {mcpConnected() > 0 ? `${mcpConnected()} ` : ""}
             {language.t("status.popover.tab.mcp")}
@@ -330,8 +330,7 @@ export function StatusPopoverBody(props: { shown: Accessor<boolean> }) {
           </Show>
         </Tabs.List>
 
-        {!settings.general.newLayoutDesigns() && (
-          <Tabs.Content value="servers">
+        <Tabs.Content value="servers">
             <div class="flex flex-col px-2 pb-2">
               <div class="flex flex-col p-3 bg-background-base rounded-sm min-h-14">
                 <For each={sortedServers()}>
@@ -379,23 +378,38 @@ export function StatusPopoverBody(props: { shown: Accessor<boolean> }) {
                   }}
                 </For>
 
-                <Button
-                  variant="secondary"
-                  class="mt-3 self-start h-8 px-3 py-1.5"
-                  onClick={() => {
-                    const run = ++dialogRun
-                    void import("./dialog-select-server").then((x) => {
-                      if (dialogDead || dialogRun !== run) return
-                      dialog.show(() => <x.DialogSelectServer />, defaultServer.refresh)
-                    })
-                  }}
-                >
-                  {language.t("status.popover.action.manageServers")}
-                </Button>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    class="h-8 px-3 py-1.5"
+                    onClick={() => {
+                      const run = ++dialogRun
+                      void import("./dialog-select-server").then((x) => {
+                        if (dialogDead || dialogRun !== run) return
+                        dialog.show(() => <x.DialogSelectServer />, defaultServer.refresh)
+                      })
+                    }}
+                  >
+                    {language.t("status.popover.action.manageServers")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    class="h-8 px-3 py-1.5"
+                    disabled={restart.state() === "restarting" || !restart.capability()?.restartable}
+                    onClick={() => void restart.restart()}
+                  >
+                    {restart.state() === "restarting"
+                      ? "Restarting OpenCode…"
+                      : restart.state() === "failed"
+                        ? "Restart failed"
+                        : restart.capability.loading
+                          ? "Checking restart…"
+                          : "Restart OpenCode"}
+                  </Button>
+                </div>
               </div>
             </div>
           </Tabs.Content>
-        )}
 
         <Tabs.Content value="mcp">
           <div class="flex flex-col px-2 pb-2">

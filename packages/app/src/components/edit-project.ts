@@ -17,6 +17,7 @@ export function createEditProjectModel(props: { project: LocalProject; server: S
   const [store, setStore] = createStore({
     name: defaultName(),
     color: props.project.icon?.color,
+    shape: props.project.icon?.shape ?? "circle",
     iconOverride: props.project.icon?.override,
     startup: props.project.commands?.start ?? "",
     dragOver: false,
@@ -77,7 +78,7 @@ export function createEditProjectModel(props: { project: LocalProject; server: S
             projectID: props.project.id,
             directory: props.project.worktree,
             name,
-            icon: { color: store.color || "", override: store.iconOverride || "" },
+            icon: { color: store.color || "", override: store.iconOverride || "", shape: store.shape },
             commands: { start },
           })
           .then((result) => result.data)
@@ -85,7 +86,7 @@ export function createEditProjectModel(props: { project: LocalProject; server: S
         // const project = await serverCtx().sdk.api.project.update({
         //   projectID: props.project.id,
         //   name,
-        //   icon: { color: store.color || "", override: store.iconOverride || "" },
+        //   icon: { color: store.color || "", override: store.iconOverride || "", shape: store.shape },
         //   commands: { start },
         // })
         serverCtx().sync.set("project", (items) =>
@@ -98,7 +99,7 @@ export function createEditProjectModel(props: { project: LocalProject; server: S
 
       serverCtx().sync.project.meta(props.project.worktree, {
         name,
-        icon: { color: store.color || undefined, override: store.iconOverride || undefined },
+        icon: { color: store.color || undefined, override: store.iconOverride || undefined, shape: store.shape },
         commands: { start: start || undefined },
       })
       dialog.close()

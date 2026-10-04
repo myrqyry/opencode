@@ -117,6 +117,7 @@ export default {
           \`icon_url\` text,
           \`icon_url_override\` text,
           \`icon_color\` text,
+          \`icon_shape\` text,
           \`time_created\` integer NOT NULL,
           \`time_updated\` integer NOT NULL,
           \`time_initialized\` integer,

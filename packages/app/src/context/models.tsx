@@ -1,4 +1,4 @@
-import { type Accessor, createMemo, createResource } from "solid-js"
+import { type Accessor, createEffect, createMemo, createResource, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { DateTime } from "luxon"
 import { filter, firstBy, flat, groupBy, mapValues, pipe, uniqueBy, values } from "remeda"
@@ -17,6 +17,37 @@ type Store = {
 }
 
 const RECENT_LIMIT = 5
+const MODEL_VISIBILITY_EVENT = "opencode:model-visibility-changed"
+const MODEL_VISIBILITY_BACKUP = "meristem.model-visibility.v1"
+
+type ModelVisibilityEvent = ModelKey & { visibility: Visibility }
+
+function readVisibilityBackup(): User[] {
+  if (typeof localStorage === "undefined") return []
+  try {
+    const value = JSON.parse(localStorage.getItem(MODEL_VISIBILITY_BACKUP) ?? "[]")
+    if (!Array.isArray(value)) return []
+    return value.filter(
+      (item): item is User =>
+        !!item &&
+        typeof item === "object" &&
+        typeof item.providerID === "string" &&
+        typeof item.modelID === "string" &&
+        (item.visibility === "show" || item.visibility === "hide"),
+    )
+  } catch {
+    return []
+  }
+}
+
+function writeVisibilityBackup(user: User[]) {
+  if (typeof localStorage === "undefined") return
+  try {
+    localStorage.setItem(MODEL_VISIBILITY_BACKUP, JSON.stringify(user))
+  } catch {
+    // The primary persisted store still works if browser backup storage is unavailable.
+  }
+}
 
 function modelKey(model: ModelKey) {
   return `${model.providerID}:${model.modelID}`
@@ -36,6 +67,33 @@ export const { use: useModels, provider: ModelsProvider } = createSimpleContext(
         variant: {},
       }),
     )
+
+    let backupChecked = false
+    createEffect(() => {
+      if (!ready() || backupChecked) return
+      backupChecked = true
+      const backup = readVisibilityBackup()
+      if (store.user.length === 0 && backup.length > 0) {
+        setStore("user", backup)
+        return
+      }
+      writeVisibilityBackup(store.user)
+    })
+
+    const onVisibilityChanged = (event: Event) => {
+      const detail = (event as CustomEvent<ModelVisibilityEvent>).detail
+      if (!detail) return
+      update(
+        { providerID: detail.providerID, modelID: detail.modelID },
+        detail.visibility,
+      )
+      writeVisibilityBackup(store.user)
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener(MODEL_VISIBILITY_EVENT, onVisibilityChanged)
+      onCleanup(() => window.removeEventListener(MODEL_VISIBILITY_EVENT, onVisibilityChanged))
+    }
 
     const available = createMemo(() =>
       providers.connected().flatMap((p) =>
@@ -124,7 +182,16 @@ export const { use: useModels, provider: ModelsProvider } = createSimpleContext(
     }
 
     const setVisibility = (model: ModelKey, state: boolean) => {
-      update(model, state ? "show" : "hide")
+      const visibility = state ? "show" : "hide"
+      update(model, visibility)
+      writeVisibilityBackup(store.user)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent<ModelVisibilityEvent>(MODEL_VISIBILITY_EVENT, {
+            detail: { ...model, visibility },
+          }),
+        )
+      }
     }
 
     const push = (model: ModelKey) => {

@@ -3,17 +3,17 @@ import { Dialog } from "@opencode-ai/ui/dialog"
 import { TextField } from "@opencode-ai/ui/text-field"
 import { Icon } from "@opencode-ai/ui/icon"
 import { For, Show } from "solid-js"
-import { type LocalProject, getAvatarColors } from "@/context/layout"
+import { type LocalProject } from "@/context/layout"
+import { useProjectColor } from "@/utils/project-color"
 import { Avatar } from "@opencode-ai/ui/avatar"
 import { useLanguage } from "@/context/language"
 import { getProjectAvatarSource } from "@/pages/layout/helpers"
 import { ServerConnection } from "@/context/server"
 import { createEditProjectModel } from "./edit-project"
 
-const AVATAR_COLOR_KEYS = ["pink", "mint", "orange", "purple", "cyan", "lime"] as const
-
 export function DialogEditProject(props: { project: LocalProject; server: ServerConnection.Any }) {
   const language = useLanguage()
+  const projectColor = useProjectColor()
   const model = createEditProjectModel(props)
 
   return (
@@ -59,7 +59,8 @@ export function DialogEditProject(props: { project: LocalProject; server: Server
                       <div class="size-full flex items-center justify-center">
                         <Avatar
                           fallback={model.store.name || model.defaultName()}
-                          {...getAvatarColors(model.store.color)}
+                          background={projectColor.resolve(props.project, model.store.color)}
+                          foreground="#ffffff"
                           class="size-full text-[32px]"
                         />
                       </div>
@@ -113,28 +114,34 @@ export function DialogEditProject(props: { project: LocalProject; server: Server
           <Show when={!model.store.iconOverride}>
             <div class="flex flex-col gap-2">
               <label class="text-12-medium text-text-weak">{language.t("dialog.project.edit.color")}</label>
-              <div class="flex gap-1.5">
-                <For each={AVATAR_COLOR_KEYS}>
-                  {(color) => (
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  class="h-10 rounded-lg border border-border-weak-base px-2 text-12-regular text-text-weak hover:bg-surface-base-hover"
+                  classList={{ "border-2 border-icon-strong-base": !model.store.color }}
+                  onClick={() => model.setStore("color", undefined)}
+                >
+                  Auto
+                </button>
+                <For each={projectColor.accents()}>
+                  {(accent) => (
                     <button
                       type="button"
-                      aria-label={language.t("dialog.project.edit.color.select", { color })}
-                      aria-pressed={model.store.color === color}
+                      aria-label={language.t("dialog.project.edit.color.select", { color: accent.id })}
+                      aria-pressed={projectColor.selected(model.store.color) === accent.id}
                       classList={{
                         "flex items-center justify-center size-10 p-0.5 rounded-lg overflow-hidden transition-colors cursor-default": true,
                         "bg-transparent border-2 border-icon-strong-base hover:bg-surface-base-hover":
-                          model.store.color === color,
+                          projectColor.selected(model.store.color) === accent.id,
                         "bg-transparent border border-transparent hover:bg-surface-base-hover hover:border-border-weak-base":
-                          model.store.color !== color,
+                          projectColor.selected(model.store.color) !== accent.id,
                       }}
-                      onClick={() => {
-                        if (model.store.color === color && !props.project.icon?.url) return
-                        model.setStore("color", model.store.color === color ? undefined : color)
-                      }}
+                      onClick={() => model.setStore("color", projectColor.value(accent.id))}
                     >
                       <Avatar
                         fallback={model.store.name || model.defaultName()}
-                        {...getAvatarColors(color)}
+                        background={accent.color}
+                        foreground="#ffffff"
                         class="size-full rounded"
                       />
                     </button>

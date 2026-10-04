@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Context, Effect, Layer } from "effect"
 import open from "open"
@@ -13,7 +14,18 @@ const layer = Layer.succeed(
   Service.of({
     open: Effect.fn("McpBrowser.open")(function* (url: string) {
       const subprocess = yield* Effect.tryPromise({
-        try: () => open(url),
+        try: async () => {
+          const configHome = process.env.OPENCODE_BROWSER_XDG_CONFIG_HOME
+          const dataHome = process.env.OPENCODE_BROWSER_XDG_DATA_HOME
+          if (process.platform !== "linux" || (!configHome && !dataHome)) return open(url)
+
+          const env = { ...process.env }
+          if (configHome) env.XDG_CONFIG_HOME = configHome
+          if (dataHome) env.XDG_DATA_HOME = dataHome
+          const child = spawn("xdg-open", [url], { env, stdio: "ignore", detached: true })
+          child.unref()
+          return child
+        },
         catch: (error) => (error instanceof Error ? error : new Error(String(error))),
       })
       yield* Effect.callback<void, Error>((resume) => {
