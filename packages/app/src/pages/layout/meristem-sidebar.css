@@ -41,6 +41,7 @@ body[data-new-layout]
     [data-slot="meristem-section-toggle"],
     [data-slot="meristem-sidebar-row"],
     [data-slot="project-row"],
+    [data-slot="project-chevron"],
     [data-slot="collapsed-project-button"]
   ):focus-visible,
 body[data-new-layout] [data-slot="project-sessions"] > button:focus-visible,
@@ -92,7 +93,7 @@ body[data-new-layout] [data-slot="project-chevron"] {
 }
 
 body[data-new-layout] [data-slot="meristem-section-toggle"][aria-expanded="true"] [data-slot="meristem-section-chevron"],
-body[data-new-layout] [data-slot="project-row"][aria-expanded="true"] [data-slot="project-chevron"] {
+body[data-new-layout] [data-meristem-project][data-expanded="true"] [data-slot="project-chevron"] {
   transform: rotate(90deg);
 }
 

@@ -424,6 +424,13 @@ body[data-new-layout] [data-component="icon-button-v2"][data-size="small"] {
   border-radius: var(--v2-shape-raised);
 }
 
+/* Send is the composer's one focal action, so it takes the circle step rather than a
+   rounded rectangle. Declared here at the same specificity as the icon-button-v2 radius
+   above so it wins on order instead of fighting it from the class attribute. */
+body[data-new-layout] [data-action="prompt-submit"] {
+  border-radius: var(--v2-shape-pill);
+}
+
 body[data-new-layout]
   :is(
     [data-component="text-input-v2"],

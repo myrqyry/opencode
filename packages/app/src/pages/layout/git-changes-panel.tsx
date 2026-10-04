@@ -5,6 +5,7 @@ import { ButtonV2 } from "@opencode-ai/ui/v2/button-v2"
 import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { Icon } from "@opencode-ai/ui/v2/icon"
 import { TextareaV2 } from "@opencode-ai/ui/v2/textarea-v2"
+import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 import { formatServerError } from "@/utils/server-errors"
@@ -25,11 +26,6 @@ function filename(file: string) {
   return file.split(/[\\/]/).at(-1) ?? file
 }
 
-function dirname(file: string) {
-  const name = filename(file)
-  return file === name ? "" : file.slice(0, -(name.length + 1))
-}
-
 function changedFile(properties: unknown): string | undefined {
   if (!properties || typeof properties !== "object" || !("file" in properties)) return undefined
   return typeof properties.file === "string" ? properties.file : undefined
@@ -39,6 +35,12 @@ function status(change: Change) {
   if (change.status === "added") return "A"
   if (change.status === "deleted") return "D"
   return "M"
+}
+
+function statusTone(change: Change) {
+  if (change.status === "added") return "text-v2-state-fg-success"
+  if (change.status === "deleted") return "text-v2-state-fg-danger"
+  return "text-v2-state-fg-warning"
 }
 
 export function GitChangesPanel(props: { onSelectFile: (path: string) => void }) {
@@ -162,28 +164,28 @@ export function GitChangesPanel(props: { onSelectFile: (path: string) => void })
                 class="group flex min-w-0 items-center gap-2 px-2 py-0.5 hover:bg-v2-overlay-simple-overlay-hover"
                 data-file={change.file}
               >
-                <button
-                  type="button"
-                  class="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[5px] px-1 text-left focus-visible:outline-2 focus-visible:outline-v2-border-border-focus"
-                  title={change.file}
-                  onClick={() => props.onSelectFile(change.file)}
-                >
-                  <span
-                    class="w-4 shrink-0 text-center font-mono text-[11px] font-semibold text-v2-text-text-muted"
-                    aria-hidden="true"
+                <TooltipV2 class="min-w-0 flex-1" placement="left" value={change.file}>
+                  <button
+                    type="button"
+                    class="flex h-7 w-full min-w-0 items-center gap-2 rounded-[5px] px-1 text-left focus-visible:outline-2 focus-visible:outline-v2-border-border-focus"
+                    aria-label={change.file}
+                    onClick={() => props.onSelectFile(change.file)}
                   >
-                    {status(change)}
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block truncate text-12-regular text-v2-text-text-base">{filename(change.file)}</span>
-                    <Show when={dirname(change.file)}>
-                      <span class="block truncate text-[10px] text-v2-text-text-faint">{dirname(change.file)}</span>
-                    </Show>
-                  </span>
-                  <span class="shrink-0 font-mono text-[10px] tabular-nums text-v2-text-text-faint">
-                    +{change.additions} −{change.deletions}
-                  </span>
-                </button>
+                    <span
+                      class={`w-4 shrink-0 text-center font-mono text-[11px] font-semibold ${statusTone(change)}`}
+                      aria-hidden="true"
+                    >
+                      {status(change)}
+                    </span>
+                    <span class="min-w-0 flex-1 truncate text-12-regular text-v2-text-text-base">
+                      {filename(change.file)}
+                    </span>
+                    <span class="shrink-0 font-mono text-[10px] tabular-nums">
+                      <span class="text-v2-state-fg-success">+{change.additions}</span>{" "}
+                      <span class="text-v2-state-fg-danger">−{change.deletions}</span>
+                    </span>
+                  </button>
+                </TooltipV2>
                 <IconButtonV2
                   size="small"
                   variant="ghost-muted"
@@ -263,7 +265,7 @@ export function GitChangesPanel(props: { onSelectFile: (path: string) => void })
           <span class="min-w-0 flex-1 truncate text-[10px] text-v2-text-text-faint">
             {language.t("workspace.scm.commitHint")}
           </span>
-          <ButtonV2 size="small" variant="contrast" disabled={!canCommit()} onClick={() => void commit()}>
+          <ButtonV2 size="small" variant="neutral" disabled={!canCommit()} onClick={() => void commit()}>
             {store.busy === "commit" ? language.t("workspace.scm.committing") : language.t("workspace.scm.commit")}
           </ButtonV2>
         </div>

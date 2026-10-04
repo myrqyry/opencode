@@ -12,13 +12,14 @@ import { createStore } from "solid-js/store"
 import { useCommand } from "@/context/command"
 import { type LocalProject, useLayout } from "@/context/layout"
 import { useProjectColor } from "@/utils/project-color"
+import { pathKey } from "@/utils/path-key"
 import { useLanguage } from "@/context/language"
 import { useNotification } from "@/context/notification"
 import { useSettings } from "@/context/settings"
 import { useServer } from "@/context/server"
 import { useServerSync } from "@/context/server-sync"
 import { useServerSDK } from "@/context/server-sdk"
-import { tabKey, type WorkspaceView, useTabs } from "@/context/tabs"
+import { tabKey, type Tab, type WorkspaceView, useTabs } from "@/context/tabs"
 import { displayName, getProjectAvatarSource, sortedRootSessions } from "@/pages/layout/helpers"
 import { createHomeController } from "@/pages/home/home-controller"
 import { createHomeProjectsController } from "@/pages/home/home-projects-controller"
@@ -195,6 +196,7 @@ function ProjectTreeRow(props: {
   selected: Accessor<boolean>
   search: Accessor<string>
   onToggle: () => void
+  onOpen: () => void
   onOpenSession: (session: Session) => void
   selectedSessionID?: Accessor<string | undefined>
   onNewSession: () => void
@@ -218,21 +220,32 @@ function ProjectTreeRow(props: {
           type="button"
           data-slot="project-row"
           data-selected={props.selected()}
-          class="flex h-8 w-full min-w-0 items-center gap-1 rounded-[10px] px-1.5 text-left text-v2-text-text-muted transition-colors hover:bg-project-hover focus-visible:outline-none"
+          class="flex h-8 w-full min-w-0 items-center gap-1 rounded-[10px] py-0 pl-6 pr-1.5 text-left text-v2-text-text-muted transition-colors hover:bg-project-hover focus-visible:outline-none"
           classList={{
             "bg-project-selected text-v2-text-text-base shadow-soft-control": props.selected(),
           }}
-          aria-expanded={props.expanded()}
-          onClick={props.onToggle}
+          onClick={props.onOpen}
         >
-          <span data-slot="project-chevron" class="flex size-4 shrink-0 items-center justify-center text-v2-icon-icon-muted">
-            <IconV2 name="chevron-right" size="small" />
-          </span>
           <ProjectMark project={props.project} size="small" />
           <span class="min-w-0 flex-1 truncate text-[13px] [font-weight:530]">{name()}</span>
         </button>
 
-        <div data-slot="project-actions" class="pointer-events-none absolute right-1 top-1/2 z-10 flex -translate-y-1/2 items-center gap-px opacity-0 transition-opacity group-hover/project:opacity-100 group-focus-within/project:opacity-100">
+        <button
+          type="button"
+          data-slot="project-chevron"
+          aria-expanded={props.expanded()}
+          aria-label={`${props.expanded() ? "Collapse" : "Expand"} ${name()} chats`}
+          class="absolute left-1 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center rounded-[4px] text-v2-icon-icon-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
+          onClick={props.onToggle}
+        >
+          <IconV2 name="chevron-right" size="small" />
+        </button>
+
+        {/* No -translate-y-1/2 here: this element's vertical centring is owned by the
+            project-actions transform in meristem-sidebar.css. Tailwind v4 emits translate
+            utilities to the `translate` property, which composes with `transform` rather than
+            overriding it, so having both applied the -50% offset twice. */}
+        <div data-slot="project-actions" class="pointer-events-none absolute right-1 top-1/2 z-10 flex items-center gap-px opacity-0 transition-opacity group-hover/project:opacity-100 group-focus-within/project:opacity-100">
           <TooltipV2 placement="top" value="New chat">
             <button
               type="button"
@@ -513,10 +526,28 @@ export function MeristemSidebar() {
     layout.home.setSelection({ server: server.key, directory: project.worktree })
   }
 
-  const openProjectFromRail = (project: LocalProject) => {
-    layout.sidebar.open()
+  // Activating a project means "take me into its work": land on the tab already open for it,
+  // or start one, and expand the project so its previous chats are visible alongside.
+  const openProject = (project: LocalProject) => {
+    const directories = new Set([project.worktree, ...(project.sandboxes ?? [])].map(pathKey))
+    const directoryFor = (tab: Tab) =>
+      tab.type === "draft" || tab.type === "workspace" ? tab.directory : tabs.info[tabKey(tab)]?.directory
+    const matches = (tab: Tab) => {
+      const directory = directoryFor(tab)
+      return directory ? directories.has(pathKey(directory)) : false
+    }
+    const current = currentTab()
+    const open = current && matches(current) ? current : tabs.store.find(matches)
+    if (open) tabs.select(open)
+    else void tabs.newDraft({ server: server.key, directory: project.worktree })
     layout.sidebar.setWorkspaces(project.worktree, true)
     layout.home.setSelection({ server: server.key, directory: project.worktree })
+    closeMobile()
+  }
+
+  const openProjectFromRail = (project: LocalProject) => {
+    layout.sidebar.open()
+    openProject(project)
   }
 
   const toggleSection = (section: keyof typeof ui.sections) => {
@@ -778,8 +809,9 @@ export function MeristemSidebar() {
                       expanded={expanded(project)}
                       selected={() => selectedProject(project)}
                       search={() => ui.search}
-                      onToggle={() => toggleProject(project)}
-                      onOpenSession={openSession}
+onToggle={() => toggleProject(project)}
+                    onOpen={() => openProject(project)}
+                    onOpenSession={openSession}
                       selectedSessionID={currentRootSessionID}
                       onNewSession={() => newSessionFor(project)}
                       onSettings={() => {

@@ -2316,8 +2316,8 @@ export default function Page() {
   )
 
   return (
-    <SessionRouteFrame accent={projectAccent()}>
-      <SessionHeader />
+<SessionRouteFrame accent={projectAccent()}>
+        <SessionHeader />
       <div
         ref={panelRow}
         class="flex-1 min-h-0 flex flex-col md:flex-row"

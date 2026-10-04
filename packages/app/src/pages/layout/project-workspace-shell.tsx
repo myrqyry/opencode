@@ -1,5 +1,8 @@
 import { createMemo, onCleanup, Show, type ParentProps } from "solid-js"
+import { Portal } from "solid-js/web"
 import { createQuery, useQueryClient } from "@tanstack/solid-query"
+import { SessionHeaderV2Actions } from "@/components/session/session-header-v2-actions"
+import { useTitlebarRightMount } from "@/components/titlebar"
 import { CommentsProvider } from "@/context/comments"
 import { FileProvider, useFile } from "@/context/file"
 import { useGlobal } from "@/context/global"
@@ -118,6 +121,7 @@ function ProjectWorkspaceFrame(
   const sync = useSync()
   const file = useFile()
   const queryClient = useQueryClient()
+  const rightMount = useTitlebarRightMount()
   const state = createReviewPanelV2State()
   const size = createSizing()
 
@@ -192,6 +196,13 @@ function ProjectWorkspaceFrame(
 
   return (
     <div class="flex size-full min-h-0 min-w-0 bg-project-canvas">
+      <Show when={rightMount()} keyed>
+        {(mount) => (
+          <Portal mount={mount}>
+            <SessionHeaderV2Actions />
+          </Portal>
+        )}
+      </Show>
       <div class="flex min-w-0 flex-1 flex-col bg-project-surface">
         <SessionChatTabs server={props.server} directory={props.directory} />
         <div class="min-h-0 min-w-0 flex-1 overflow-hidden">{props.children}</div>

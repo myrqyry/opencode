@@ -4,6 +4,8 @@ import {
   AddSquareIcon,
   AIIcon,
   AlignJustifyIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
   ArchiveIcon,
   BrainIcon,
   CheckIcon,
@@ -39,6 +41,7 @@ import {
   ServerIcon,
   Settings3Icon,
   Share2Icon,
+  StopCircleIcon,
   SubtractIcon,
 } from "@mingcute/icons/core-regular"
 import {
@@ -110,6 +113,9 @@ const icons = {
   "outline-share": { definition: Share2Icon },
   reset: { definition: Refresh2Icon },
   "outline-reset": { definition: Refresh2Icon },
+  "arrow-up": { definition: ArrowUpIcon },
+  "arrow-down": { definition: ArrowDownIcon },
+  stop: { definition: StopCircleIcon },
   archive: { definition: ArchiveIcon },
 } satisfies Record<string, IconEntry>
 
