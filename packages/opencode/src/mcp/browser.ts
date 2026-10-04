@@ -1,7 +1,6 @@
-import { spawn } from "node:child_process"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { openUrl } from "@opencode-ai/core/open"
 import { Context, Effect, Layer } from "effect"
-import open from "open"
 
 export interface Interface {
   readonly open: (url: string) => Effect.Effect<void, Error>
@@ -14,17 +13,15 @@ const layer = Layer.succeed(
   Service.of({
     open: Effect.fn("McpBrowser.open")(function* (url: string) {
       const subprocess = yield* Effect.tryPromise({
-        try: async () => {
+        try: () => {
           const configHome = process.env.OPENCODE_BROWSER_XDG_CONFIG_HOME
           const dataHome = process.env.OPENCODE_BROWSER_XDG_DATA_HOME
-          if (process.platform !== "linux" || (!configHome && !dataHome)) return open(url)
+          if (process.platform !== "linux" || (!configHome && !dataHome)) return openUrl(url)
 
           const env = { ...process.env }
           if (configHome) env.XDG_CONFIG_HOME = configHome
           if (dataHome) env.XDG_DATA_HOME = dataHome
-          const child = spawn("xdg-open", [url], { env, stdio: "ignore", detached: true })
-          child.unref()
-          return child
+          return openUrl(url, { env })
         },
         catch: (error) => (error instanceof Error ? error : new Error(String(error))),
       })
@@ -34,11 +31,14 @@ const layer = Layer.succeed(
           clearTimeout(timer)
           resume(Effect.fail(error))
         })
-        subprocess.on("exit", (code) => {
+        const onExit = (code: number | null) => {
           if (code === null || code === 0) return
           clearTimeout(timer)
           resume(Effect.fail(new Error(`Browser open failed with exit code ${code}`)))
-        })
+        }
+        subprocess.on("exit", onExit)
+        // On Windows and WSL, open() can return only after the launcher has exited.
+        onExit(subprocess.exitCode)
       })
     }),
   }),
