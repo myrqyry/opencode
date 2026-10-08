@@ -127,16 +127,19 @@ export function SessionChatTabs(props: {
   return (
     <ProjectTabStrip
       end={
-        <Show when={props.directory}>
-          <IconButtonV2
-            size="small"
-            variant="ghost-muted"
-            class="shrink-0"
-            icon={<IconV2 name="plus" />}
-            aria-label={language.t("command.session.new")}
-            onClick={() => void tabs.newDraft({ server: props.server, directory: props.directory })}
-          />
-        </Show>
+        <div class="flex shrink-0 items-center gap-1">
+          <Show when={props.directory}>
+            <IconButtonV2
+              size="small"
+              variant="ghost-muted"
+              class="shrink-0"
+              icon={<IconV2 name="plus" />}
+              aria-label={language.t("command.session.new")}
+              onClick={() => void tabs.newDraft({ server: props.server, directory: props.directory })}
+            />
+          </Show>
+          <div id="opencode-chat-tab-actions" class="contents" />
+        </div>
       }
     >
       <For each={projectTabs()}>

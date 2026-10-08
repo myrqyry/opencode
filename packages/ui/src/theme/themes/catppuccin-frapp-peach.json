@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Frappé — Peach",
+  "id": "catppuccin-frapp-peach",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3f8",
+      "ink": "#171a27",
+      "primary": "#9e552d",
+      "accent": "#7e6560",
+      "success": "#9c5357",
+      "warning": "#9e552d",
+      "error": "#a8494e",
+      "info": "#826831"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#292c3c",
+      "ink": "#c6d0f5",
+      "primary": "#ef9f76",
+      "accent": "#f2d5cf",
+      "success": "#ea999c",
+      "warning": "#ef9f76",
+      "error": "#e78284",
+      "info": "#e5c890"
+    }
+  }
+}

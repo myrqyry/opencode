@@ -59,6 +59,8 @@ export const InstancePaths = {
   vcsStatus: "/vcs/status",
   vcsDiff: "/vcs/diff",
   vcsDiffRaw: "/vcs/diff/raw",
+  vcsBranches: "/vcs/branches",
+  vcsSwitchBranch: "/vcs/switch-branch",
   vcsApply: "/vcs/apply",
   vcsStage: "/vcs/stage",
   vcsUnstage: "/vcs/unstage",
@@ -149,6 +151,28 @@ export const InstanceApi = HttpApi.make("instance")
             identifier: "vcs.diff.raw",
             summary: "Get raw VCS diff",
             description: "Retrieve a raw patch for current uncommitted changes.",
+          }),
+        ),
+        HttpApiEndpoint.get("vcsBranches", InstancePaths.vcsBranches, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(Vcs.BranchInfo), "Local VCS branches"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "vcs.branches",
+            summary: "List VCS branches",
+            description: "List local git branches for the current working tree.",
+          }),
+        ),
+        HttpApiEndpoint.post("vcsSwitchBranch", InstancePaths.vcsSwitchBranch, {
+          query: WorkspaceRoutingQuery,
+          payload: Vcs.SwitchBranchInput,
+          success: described(Vcs.SwitchBranchResult, "Switched VCS branch"),
+          error: ApiVcsOperationError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "vcs.switchBranch",
+            summary: "Switch VCS branch",
+            description: "Switch the current clean git working tree to another local branch.",
           }),
         ),
         HttpApiEndpoint.post("vcsApply", InstancePaths.vcsApply, {

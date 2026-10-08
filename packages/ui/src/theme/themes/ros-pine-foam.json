@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Rosé Pine — Foam",
+  "id": "ros-pine-foam",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f7",
+      "ink": "#1a1921",
+      "primary": "#44757d",
+      "accent": "#6b697c",
+      "success": "#31748f",
+      "warning": "#916106",
+      "error": "#b13a61",
+      "info": "#795d98"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#191724",
+      "ink": "#e0def4",
+      "primary": "#9ccfd8",
+      "accent": "#e0def4",
+      "success": "#31748f",
+      "warning": "#f6c177",
+      "error": "#eb6f92",
+      "info": "#c4a7e7"
+    }
+  }
+}

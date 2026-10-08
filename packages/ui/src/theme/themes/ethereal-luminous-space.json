@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Ethereal Luminous Space",
+  "id": "ethereal-luminous-space",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f9",
+      "ink": "#1c1825",
+      "primary": "#037e67",
+      "accent": "#7b5e8f",
+      "success": "#107d6d",
+      "warning": "#85671a",
+      "error": "#be2d36",
+      "info": "#8251ac"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#0d0b1a",
+      "ink": "#e4d8ff",
+      "primary": "#00ffd2",
+      "accent": "#e8c8ff",
+      "success": "#00b8a0",
+      "warning": "#ffd166",
+      "error": "#ff6b6b",
+      "info": "#cf9dff"
+    }
+  }
+}

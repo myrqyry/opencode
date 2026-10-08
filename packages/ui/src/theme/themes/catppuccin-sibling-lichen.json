@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Sibling — Lichen",
+  "id": "catppuccin-sibling-lichen",
+  "light": {
+    "palette": {
+      "neutral": "#f3f4f1",
+      "ink": "#1b1b16",
+      "primary": "#765e97",
+      "accent": "#835f75",
+      "success": "#377297",
+      "warning": "#796a48",
+      "error": "#9c525d",
+      "info": "#626894"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1a1a12",
+      "ink": "#d8d8ca",
+      "primary": "#c5acea",
+      "accent": "#f0c6df",
+      "success": "#7fbbe3",
+      "warning": "#f3e3bd",
+      "error": "#e7959f",
+      "info": "#b8bff0"
+    }
+  }
+}

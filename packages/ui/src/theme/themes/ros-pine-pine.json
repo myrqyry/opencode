@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Rosé Pine — Pine",
+  "id": "ros-pine-pine",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f7",
+      "ink": "#1a1921",
+      "primary": "#31748f",
+      "accent": "#6b697c",
+      "success": "#895f5e",
+      "warning": "#916106",
+      "error": "#b13a61",
+      "info": "#44757d"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#191724",
+      "ink": "#e0def4",
+      "primary": "#31748f",
+      "accent": "#e0def4",
+      "success": "#ebbcba",
+      "warning": "#f6c177",
+      "error": "#eb6f92",
+      "info": "#9ccfd8"
+    }
+  }
+}

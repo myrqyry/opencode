@@ -100,6 +100,76 @@ describe("Vcs", () => {
     { git: true },
   )
 
+  it.instance(
+    "repositoryUrl() normalizes an SSH GitHub remote to a browser URL",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* git(test.directory, ["remote", "add", "origin", "git@github.com:example/project.git"])
+
+        const vcs = yield* init()
+        expect(yield* vcs.repositoryUrl()).toBe("https://github.com/example/project")
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "branches() lists local branches and marks the current branch",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* git(test.directory, ["branch", "feature/test"])
+
+        const vcs = yield* init()
+        const current = yield* vcs.branch()
+        const branches = yield* vcs.branches()
+
+        expect(branches).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ name: current, current: true }),
+            expect.objectContaining({ name: "feature/test", current: false }),
+          ]),
+        )
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "switchBranch() switches a clean working tree and updates VCS state",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* git(test.directory, ["branch", "feature/test"])
+
+        const vcs = yield* init()
+        const pending = yield* nextBranchUpdate()
+        const result = yield* vcs.switchBranch({ branch: "feature/test" })
+
+        expect(result).toEqual({ branch: "feature/test" })
+        expect(yield* Deferred.await(pending).pipe(Effect.timeout("2 seconds"))).toBe("feature/test")
+        expect(yield* vcs.branch()).toBe("feature/test")
+        expect((yield* vcs.branches()).find((item) => item.name === "feature/test")?.current).toBe(true)
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "switchBranch() refuses to carry working-tree changes across branches",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* git(test.directory, ["branch", "feature/test"])
+        yield* write(path.join(test.directory, "dirty.txt"), "dirty\n")
+
+        const vcs = yield* init()
+        const error = yield* Effect.flip(vcs.switchBranch({ branch: "feature/test" }))
+
+        expect(error.reason).toBe("failed")
+        expect(error.message).toContain("working-tree changes")
+      }),
+    { git: true },
+  )
+
   it.instance("branch() returns undefined for non-git directories", () =>
     Effect.gen(function* () {
       const vcs = yield* init()

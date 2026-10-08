@@ -2318,6 +2318,7 @@ export type Path = {
 export type VcsInfo = {
   branch?: string
   default_branch?: string
+  repository_url?: string
 }
 
 export type VcsFileStatus = {
@@ -2335,12 +2336,13 @@ export type VcsFileDiff = {
   status?: "added" | "deleted" | "modified"
 }
 
-export type VcsApplyError = {
-  name: "VcsApplyError"
-  data: {
-    message: string
-    reason: "non-git" | "not-clean"
-  }
+export type VcsBranchInfo = {
+  name: string
+  current: boolean
+}
+
+export type VcsSwitchBranchResult = {
+  branch: string
 }
 
 export type VcsOperationError = {
@@ -2348,6 +2350,14 @@ export type VcsOperationError = {
   data: {
     message: string
     reason: "non-git" | "invalid-path" | "empty-message" | "nothing-staged" | "failed"
+  }
+}
+
+export type VcsApplyError = {
+  name: "VcsApplyError"
+  data: {
+    message: string
+    reason: "non-git" | "not-clean"
   }
 }
 
@@ -8330,6 +8340,64 @@ export type VcsDiffRawResponses = {
 }
 
 export type VcsDiffRawResponse = VcsDiffRawResponses[keyof VcsDiffRawResponses]
+
+export type VcsBranchesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/vcs/branches"
+}
+
+export type VcsBranchesErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type VcsBranchesError = VcsBranchesErrors[keyof VcsBranchesErrors]
+
+export type VcsBranchesResponses = {
+  /**
+   * Local VCS branches
+   */
+  200: Array<VcsBranchInfo>
+}
+
+export type VcsBranchesResponse = VcsBranchesResponses[keyof VcsBranchesResponses]
+
+export type VcsSwitchBranchData = {
+  body?: {
+    branch: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/vcs/switch-branch"
+}
+
+export type VcsSwitchBranchErrors = {
+  /**
+   * VcsOperationError | InvalidRequestError
+   */
+  400: VcsOperationError | InvalidRequestError
+}
+
+export type VcsSwitchBranchError = VcsSwitchBranchErrors[keyof VcsSwitchBranchErrors]
+
+export type VcsSwitchBranchResponses = {
+  /**
+   * Switched VCS branch
+   */
+  200: VcsSwitchBranchResult
+}
+
+export type VcsSwitchBranchResponse = VcsSwitchBranchResponses[keyof VcsSwitchBranchResponses]
 
 export type VcsApplyData = {
   body?: {

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Claude Code Warm",
+  "id": "claude-code-warm",
+  "light": {
+    "palette": {
+      "neutral": "#f4f3f3",
+      "ink": "#211913",
+      "primary": "#aa4b2b",
+      "accent": "#826552",
+      "success": "#9e4b2d",
+      "warning": "#8e6218",
+      "error": "#c20119",
+      "info": "#826738"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#171614",
+      "ink": "#f6dece",
+      "primary": "#da7756",
+      "accent": "#ffdec8",
+      "success": "#9e4b2d",
+      "warning": "#e1a035",
+      "error": "#e33737",
+      "info": "#f3d5a3"
+    }
+  }
+}

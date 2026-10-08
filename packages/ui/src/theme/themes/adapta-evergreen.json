@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Adapta Evergreen",
+  "id": "adapta-evergreen",
+  "light": {
+    "palette": {
+      "neutral": "#f0f4f6",
+      "ink": "#1b1b1b",
+      "primary": "#517a19",
+      "accent": "#6c6c6c",
+      "success": "#4c7b0e",
+      "warning": "#806a18",
+      "error": "#ad4734",
+      "info": "#4f7b01"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#222d32",
+      "ink": "#d4d4d4",
+      "primary": "#afff45",
+      "accent": "#d4d4d4",
+      "success": "#6ba22e",
+      "warning": "#cca700",
+      "error": "#f48771",
+      "info": "#85c036"
+    }
+  }
+}

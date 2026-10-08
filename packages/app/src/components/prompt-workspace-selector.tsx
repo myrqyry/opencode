@@ -4,6 +4,7 @@ import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { getFilename } from "@opencode-ai/core/util/path"
+import { GitBranchSwitcher } from "@/components/git-branch-switcher"
 import { useLanguage } from "@/context/language"
 
 export function PromptWorkspaceSelector(props: {
@@ -93,12 +94,12 @@ export function PromptWorkspaceSelector(props: {
           </MenuV2.Content>
         </MenuV2.Portal>
       </MenuV2>
-      <PromptGitStatus branch={props.branch} />
+      <PromptGitStatus branch={props.branch} switchable={selected() === "main"} />
     </>
   )
 }
 
-export function PromptGitStatus(props: { branch?: string; noGit?: boolean }) {
+export function PromptGitStatus(props: { branch?: string; noGit?: boolean; switchable?: boolean }) {
   const language = useLanguage()
   const label = () => {
     if (props.noGit) return language.t("session.new.git.none")
@@ -110,17 +111,24 @@ export function PromptGitStatus(props: { branch?: string; noGit?: boolean }) {
       {(value) => (
         <>
           <span class="hidden select-none opacity-50 sm:inline mx-1">/</span>
-          <TooltipV2
-            placement="top"
-            value={value()}
-            class="min-w-0 max-w-[220px]"
-            contentClass="max-w-[calc(100vw-32px)] break-all"
+          <Show
+            when={!props.noGit}
+            fallback={
+              <TooltipV2
+                placement="top"
+                value={value()}
+                class="min-w-0 max-w-[220px]"
+                contentClass="max-w-[calc(100vw-32px)] break-all"
+              >
+                <div class="flex h-7 min-w-0 max-w-[220px] items-center gap-1.5 px-2 text-[13px] font-[440] leading-5 tracking-[-0.04px]">
+                  <Icon name="branch" size="small" class="shrink-0 text-v2-icon-icon-muted" />
+                  <span class="min-w-0 truncate">{value()}</span>
+                </div>
+              </TooltipV2>
+            }
           >
-            <div class="flex h-7 min-w-0 max-w-[220px] items-center gap-1.5 px-2 text-[13px] font-[440] leading-5 tracking-[-0.04px]">
-              <Icon name="branch" size="small" class="shrink-0 text-v2-icon-icon-muted" />
-              <span class="min-w-0 truncate">{value()}</span>
-            </div>
-          </TooltipV2>
+            <GitBranchSwitcher branch={value()} variant="prompt" enabled={props.switchable !== false} />
+          </Show>
         </>
       )}
     </Show>

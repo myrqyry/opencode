@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Sibling — Sesame",
+  "id": "catppuccin-sibling-sesame",
+  "light": {
+    "palette": {
+      "neutral": "#f4f3f2",
+      "ink": "#1c1a18",
+      "primary": "#775f93",
+      "accent": "#806076",
+      "success": "#496f98",
+      "warning": "#796a4b",
+      "error": "#985460",
+      "info": "#6a668f"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1c1916",
+      "ink": "#dbd6d0",
+      "primary": "#c6ace5",
+      "accent": "#ecc8e0",
+      "success": "#8fb7e4",
+      "warning": "#f3e2c0",
+      "error": "#e398a3",
+      "info": "#c0bdeb"
+    }
+  }
+}

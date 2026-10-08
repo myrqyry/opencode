@@ -71,6 +71,8 @@ function emojiDataUri(value: string) {
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg)
 }
 
+// Mounted only when the user asks for it. The picker pulls the full emojibase dataset, so
+// building it eagerly made the dialog tall enough to push the Color row out of view.
 function FullEmojiPicker(props: { onSelect: (emoji: string) => void }) {
   let host: HTMLDivElement | undefined
   let disposePicker: (() => void) | undefined
@@ -90,7 +92,6 @@ function FullEmojiPicker(props: { onSelect: (emoji: string) => void }) {
       const picker = document.createElement("emoji-picker") as HTMLElement & { dataSource: string }
       picker.dataSource = dataSource
       picker.style.width = "100%"
-      picker.style.height = "320px"
       picker.style.maxWidth = "100%"
       picker.style.setProperty("--background", "var(--v2-background-bg-layer-01)")
       picker.style.setProperty("--border-color", "var(--v2-border-border-muted)")
@@ -137,10 +138,22 @@ function FullEmojiPicker(props: { onSelect: (emoji: string) => void }) {
     disposePicker?.()
   })
 
-  return <div ref={(element) => (host = element)} class="min-w-0 overflow-hidden rounded-[12px]" />
+  return (
+    <div
+      ref={(element) => (host = element)}
+      class="max-h-[min(280px,38vh)] min-w-0 overflow-y-auto overflow-x-hidden rounded-[12px]"
+    />
+  )
 }
 
 type IconMode = "letter" | "emoji" | "svg" | "upload"
+
+const ICON_MODE_LABEL = {
+  letter: "dialog.project.edit.iconMode.letter",
+  emoji: "dialog.project.edit.iconMode.emoji",
+  svg: "dialog.project.edit.iconMode.svg",
+  upload: "dialog.project.edit.iconMode.upload",
+} as const satisfies Record<IconMode, string>
 
 const SHAPE_LABELS: Record<ProjectAvatarShape, string> = {
   circle: "Circle",
@@ -157,6 +170,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
   const model = createEditProjectModel(props)
   const [iconMode, setIconMode] = createSignal<IconMode>(model.store.iconOverride ? "upload" : "letter")
   const [customEmoji, setCustomEmoji] = createSignal("")
+  const [browseEmoji, setBrowseEmoji] = createSignal(false)
   const resolvedColor = createMemo(() => projectColor.resolve(props.project, model.store.color) ?? "#5c5c5c")
   const [hexColor, setHexColor] = createSignal<string>(resolvedColor())
 
@@ -261,15 +275,16 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                         onClick={() => {
                           setIconMode(mode)
                           if (mode === "letter") model.setStore("iconOverride", "")
+                          if (mode === "upload") model.setStore("color", undefined)
                         }}
                       >
-                        {mode === "letter" ? "Letter" : mode === "emoji" ? "Emoji" : mode === "svg" ? "SVG" : "Upload"}
+                        {language.t(ICON_MODE_LABEL[mode])}
                       </button>
                     )}
                   </For>
                 </div>
                 <div class="mt-2 text-[11px] leading-4 text-v2-text-text-faint">
-                  Built-in choices stay tiny; upload is still there when you actually want an image.
+                  {language.t("dialog.project.edit.iconMode.hint")}
                 </div>
               </div>
             </div>
@@ -279,7 +294,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                 {(shape) => (
                   <button
                     type="button"
-                    aria-label={`Use ${SHAPE_LABELS[shape]} project icon shape`}
+                    aria-label={language.t("dialog.project.edit.color.shape", { shape: SHAPE_LABELS[shape] })}
                     aria-pressed={model.store.shape === shape}
                     class="flex min-w-0 flex-col items-center gap-1 rounded-[10px] px-1 py-1.5 text-[10px] leading-none text-v2-text-text-faint transition-[background-color,box-shadow,color] hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-v2-border-border-focus"
                     classList={{
@@ -308,7 +323,9 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
             <Show when={iconMode() === "emoji"}>
               <div class="flex min-w-0 flex-col gap-2 rounded-[12px] bg-v2-background-bg-layer-01 p-2">
                 <div class="flex items-center gap-2 px-0.5">
-                  <span class="text-[11px] font-[530] text-v2-text-text-muted">Quick picks</span>
+                  <span class="text-[11px] font-[530] text-v2-text-text-muted">
+                    {language.t("dialog.project.edit.emoji.quickPicks")}
+                  </span>
                   <div class="h-px min-w-0 flex-1 bg-v2-border-border-muted" />
                 </div>
                 <div class="grid grid-cols-8 gap-1">
@@ -317,7 +334,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                       <button
                         type="button"
                         class="grid size-8 place-items-center rounded-[7px] text-[18px] leading-none transition-colors hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-2 focus-visible:outline-v2-border-border-focus focus-visible:outline-offset-[-2px]"
-                        aria-label={"Use " + emoji + " as project icon"}
+                        aria-label={language.t("dialog.project.edit.emoji.select", { emoji })}
                         onClick={() => chooseEmoji(emoji)}
                       >
                         <span class="block leading-none">{emoji}</span>
@@ -326,15 +343,28 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                   </For>
                 </div>
                 <div class="flex items-center gap-2 px-0.5 pt-0.5">
-                  <span class="text-[11px] font-[530] text-v2-text-text-muted">All emoji</span>
+                  <span class="text-[11px] font-[530] text-v2-text-text-muted">
+                    {language.t("dialog.project.edit.emoji.all")}
+                  </span>
                   <div class="h-px min-w-0 flex-1 bg-v2-border-border-muted" />
+                  <ButtonV2
+                    type="button"
+                    variant="ghost-muted"
+                    size="small"
+                    aria-expanded={browseEmoji()}
+                    onClick={() => setBrowseEmoji((value) => !value)}
+                  >
+                    {language.t("dialog.project.edit.emoji.browse")}
+                  </ButtonV2>
                 </div>
-                <FullEmojiPicker onSelect={chooseEmoji} />
+                <Show when={browseEmoji()}>
+                  <FullEmojiPicker onSelect={chooseEmoji} />
+                </Show>
                 <div class="flex items-center gap-1.5">
                   <input
                     value={customEmoji()}
                     maxlength={32}
-                    placeholder="Paste an emoji…"
+                    placeholder={language.t("dialog.project.edit.emoji.pastePlaceholder")}
                     class="h-8 min-w-0 flex-1 rounded-[7px] border border-v2-border-border-muted bg-v2-background-bg-base px-2 text-[13px] text-v2-text-text-base outline-none focus:border-v2-border-border-focus focus-visible:outline-2 focus-visible:outline-v2-border-border-focus focus-visible:outline-offset-[-2px]"
                     onInput={(event) => setCustomEmoji(event.currentTarget.value)}
                   />
@@ -344,7 +374,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                     disabled={!customEmoji().trim()}
                     onClick={() => chooseEmoji(customEmoji().trim())}
                   >
-                    Use
+                    {language.t("dialog.project.edit.emoji.use")}
                   </ButtonV2>
                 </div>
               </div>
@@ -357,7 +387,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                     <button
                       type="button"
                       title={label}
-                      aria-label={"Use " + label + " SVG icon"}
+                      aria-label={language.t("dialog.project.edit.svg.select", { label })}
                       class="flex size-8 items-center justify-center rounded-[5px] text-v2-icon-icon-base hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
                       onClick={() => chooseSvg(name)}
                     >
@@ -375,12 +405,15 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                 onClick={() => model.iconClick()}
               >
                 <Icon name="outline-share" size="small" />
-                Choose image
+                {language.t("dialog.project.edit.upload.choose")}
               </button>
             </Show>
           </div>
 
-          <div class="flex w-full flex-col gap-2">
+          {/* Sits above the worktree field so it stays in view for every icon mode. Color is
+              meaningless for an uploaded image, so the row is hidden there. */}
+          <Show when={iconMode() !== "upload"}>
+            <div class="flex w-full flex-col gap-2">
             <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-v2-text-text-base">
               {language.t("dialog.project.edit.color")}
             </div>
@@ -400,7 +433,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                   setHexColor(projectColor.resolve(props.project, undefined) ?? "#5c5c5c")
                 }}
               >
-                Auto
+                {language.t("dialog.project.edit.color.auto")}
               </button>
               <For each={projectColor.accents()}>
                 {(accent) => (
@@ -413,7 +446,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                     }}
                     style={{ background: accent.color }}
                     title={accent.id}
-                    aria-label={`Use theme project color ${accent.id}`}
+                    aria-label={language.t("dialog.project.edit.color.accent", { color: accent.id })}
                     aria-pressed={projectColor.selected(model.store.color) === accent.id}
                     onClick={() => {
                       model.setStore("color", projectColor.value(accent.id))
@@ -428,13 +461,13 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
               <label
                 class="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-[7px] border border-v2-border-border-muted"
                 style={{ background: hexColor() }}
-                title="Choose any custom project color"
+                title={language.t("dialog.project.edit.color.custom")}
               >
                 <input
                   type="color"
                   value={hexColor()}
                   class="absolute inset-0 size-full cursor-pointer opacity-0"
-                  aria-label="Choose custom project color"
+                  aria-label={language.t("dialog.project.edit.color.custom")}
                   onInput={(event) => setProjectColor(event.currentTarget.value)}
                 />
               </label>
@@ -442,13 +475,16 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                 value={hexColor()}
                 spellcheck={false}
                 maxlength={7}
-                aria-label="Custom project color hex value"
+                aria-label={language.t("dialog.project.edit.color.hex")}
                 class="h-9 w-[108px] rounded-[6px] border border-v2-border-border-muted bg-v2-background-bg-base px-2 font-mono text-[12px] text-v2-text-text-base outline-none focus:border-v2-border-border-focus"
                 onInput={(event) => setProjectColor(event.currentTarget.value)}
               />
-              <span class="text-[11px] text-v2-text-text-faint">Theme colors or any custom color.</span>
+              <span class="text-[11px] text-v2-text-text-faint">
+                {language.t("dialog.project.edit.color.autoHint")}
+              </span>
             </div>
           </div>
+          </Show>
 
           <Field>
             <Field.Label>{language.t("dialog.project.edit.worktree.startup")}</Field.Label>

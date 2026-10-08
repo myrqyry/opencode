@@ -722,6 +722,69 @@ describe("session.compaction.prune", () => {
   )
 
   it.live(
+    "keeps the three most recent visual tool-result turns rich",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const compact = yield* SessionCompaction.Service
+          const ssn = yield* SessionNs.Service
+          const info = yield* ssn.create({})
+          const callIDs: string[] = []
+
+          for (const text of ["first", "second", "third", "fourth"]) {
+            const user = yield* createUserMessage(info.id, text)
+            const assistant = yield* createAssistantMessage(info.id, user.id, dir)
+            const callID = crypto.randomUUID()
+            callIDs.push(callID)
+            yield* ssn.updatePart({
+              id: PartID.ascending(),
+              messageID: assistant.id,
+              sessionID: info.id,
+              type: "tool",
+              callID,
+              tool: "browser",
+              state: {
+                status: "completed",
+                input: {},
+                output: "x".repeat(200_000),
+                title: "snapshot",
+                metadata: {},
+                time: { start: Date.now(), end: Date.now() },
+                attachments: [
+                  {
+                    id: PartID.ascending(),
+                    messageID: assistant.id,
+                    sessionID: info.id,
+                    type: "file",
+                    mime: "image/png",
+                    filename: `${text}.png`,
+                    url: "data:image/png;base64,AAAA",
+                  },
+                ],
+              },
+            })
+          }
+
+          yield* compact.prune({ sessionID: info.id })
+
+          const msgs = yield* ssn.messages({ sessionID: info.id })
+          const tools = msgs
+            .flatMap((msg) => msg.parts)
+            .filter((part): part is SessionV1.ToolPart => part.type === "tool" && callIDs.includes(part.callID))
+          expect(tools).toHaveLength(4)
+          expect(
+            tools.map((part) => part.state.status === "completed" && part.state.time.compacted !== undefined),
+          ).toEqual([true, false, false, false])
+        }),
+      {
+        config: {
+          compaction: { prune: true },
+        },
+      },
+    ),
+  )
+
+  it.live(
     "skips protected skill tool output",
     provideTmpdirInstance((dir) =>
       Effect.gen(function* () {

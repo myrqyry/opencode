@@ -391,6 +391,8 @@ import type {
   V2SkillListResponses,
   VcsApplyErrors,
   VcsApplyResponses,
+  VcsBranchesErrors,
+  VcsBranchesResponses,
   VcsCommitErrors,
   VcsCommitResponses,
   VcsDiffErrors,
@@ -403,6 +405,8 @@ import type {
   VcsStageResponses,
   VcsStatusErrors,
   VcsStatusResponses,
+  VcsSwitchBranchErrors,
+  VcsSwitchBranchResponses,
   VcsUnstageErrors,
   VcsUnstageResponses,
   WorktreeCreateErrors,
@@ -2166,6 +2170,73 @@ export class Vcs extends HeyApiClient {
       url: "/vcs/diff",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * List VCS branches
+   *
+   * List local git branches for the current working tree.
+   */
+  public branches<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<VcsBranchesResponses, VcsBranchesErrors, ThrowOnError>({
+      url: "/vcs/branches",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Switch VCS branch
+   *
+   * Switch the current clean git working tree to another local branch.
+   */
+  public switchBranch<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      branch?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "branch" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<VcsSwitchBranchResponses, VcsSwitchBranchErrors, ThrowOnError>({
+      url: "/vcs/switch-branch",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 

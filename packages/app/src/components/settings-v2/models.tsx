@@ -44,6 +44,16 @@ export const SettingsModelsV2: Component = () => {
       }
     })
   }
+  const searching = () => list.filter().length > 0
+  const expanded = (providerID: string) => searching() || !store.collapsed[providerID]
+  const allExpanded = () => list.grouped.latest.length > 0 && list.grouped.latest.every((group) => expanded(group.category))
+  const toggleAll = () => {
+    if (searching()) return
+    const collapse = allExpanded()
+    batch(() => {
+      for (const group of list.grouped.latest) setStore("collapsed", group.category, collapse)
+    })
+  }
 
   const list = useFilteredList<ModelItem>({
     items: (_filter) =>
@@ -99,6 +109,17 @@ export const SettingsModelsV2: Component = () => {
               />
             </Show>
           </div>
+          <IconButtonV2
+            type="button"
+            variant="ghost-muted"
+            size="small"
+            disabled={searching() || list.grouped.latest.length === 0}
+            aria-label={language.t(allExpanded() ? "session.todo.collapse" : "session.todo.expand")}
+            aria-pressed={allExpanded()}
+            title={language.t(allExpanded() ? "session.todo.collapse" : "session.todo.expand")}
+            icon={<IconV2 name={allExpanded() ? "collapse" : "expand-list"} size="small" />}
+            onClick={toggleAll}
+          />
           <ButtonV2
             type="button"
             size="small"
@@ -133,26 +154,25 @@ export const SettingsModelsV2: Component = () => {
           >
             <For each={list.grouped.latest}>
               {(group) => {
-                const searching = () => list.filter().length > 0
-                const expanded = () => searching() || !store.collapsed[group.category]
+                const isExpanded = () => expanded(group.category)
 
                 return (
                   <div
                     class="settings-v2-section"
                     data-component="settings-models-provider"
-                    data-expanded={expanded() ? "" : undefined}
+                    data-expanded={isExpanded() ? "" : undefined}
                   >
                     <h3 class="settings-v2-models-group-header justify-between">
                       <button
                         type="button"
                         class="settings-v2-models-group-trigger"
-                        aria-expanded={expanded()}
+                        aria-expanded={isExpanded()}
                         disabled={searching()}
-                        onClick={() => setStore("collapsed", group.category, expanded())}
+                        onClick={() => setStore("collapsed", group.category, isExpanded())}
                       >
                         <span class="settings-v2-models-group-chevron">
-                          <Show
-                            when={expanded()}
+                            <Show
+                              when={isExpanded()}
                             fallback={
                               <svg width="5" height="6" viewBox="0 0 5 6" fill="none" aria-hidden="true">
                                 <path
@@ -192,7 +212,7 @@ export const SettingsModelsV2: Component = () => {
                         {group.items[0].provider.name}
                       </Switch>
                     </h3>
-                    <Show when={expanded()}>
+                    <Show when={isExpanded()}>
                       <SettingsListV2>
                         <For each={group.items}>
                           {(item) => {

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Ethereal Gothic Angel",
+  "id": "ethereal-gothic-angel",
+  "light": {
+    "palette": {
+      "neutral": "#f5f3f3",
+      "ink": "#22171a",
+      "primary": "#c50d4d",
+      "accent": "#975467",
+      "success": "#be0349",
+      "warning": "#85671a",
+      "error": "#c51d2c",
+      "info": "#c21a55"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#0f090b",
+      "ink": "#f0d0d8",
+      "primary": "#ff3b70",
+      "accent": "#ffb3c6",
+      "success": "#d42a5a",
+      "warning": "#ffd166",
+      "error": "#ff5c5c",
+      "info": "#ff5c86"
+    }
+  }
+}

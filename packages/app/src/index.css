@@ -13,10 +13,7 @@
   --color-project-composer: var(--project-composer-surface, var(--meristem-theme-surface-soft));
   --color-project-hover: var(--project-hover-surface, var(--meristem-theme-surface-hover));
   --color-project-selected: var(--project-interactive-surface, var(--meristem-theme-surface-selected));
-  --color-project-selected-strong: var(
-    --project-interactive-strong,
-    var(--meristem-theme-surface-selected-strong)
-  );
+  --color-project-selected-strong: var(--project-interactive-strong, var(--meristem-theme-surface-selected-strong));
   --color-project-outline: var(--project-outline, var(--meristem-theme-outline));
   --color-project-outline-strong: var(--project-outline-strong, var(--meristem-theme-outline-strong));
   --color-project-accent: var(--project-accent, var(--v2-background-bg-accent));
@@ -456,21 +453,28 @@ body[data-new-layout] [data-slot="select-v2-listbox"] [data-component="menu-v2-i
   border-radius: var(--v2-shape-raised);
 }
 
-
 /* A compact identity/category shade ladder: broad surfaces stay quiet while hover,
    selection and outlines progressively carry more of the active project/theme color.
    Status meaning stays on the stable --v2-state-* tokens and is never derived from project tint. */
 body[data-new-layout] {
+  --meristem-scrollbar-track: transparent;
+  --meristem-scrollbar-thumb: color-mix(
+    in oklab,
+    var(--project-outline, var(--meristem-theme-outline, var(--v2-border-border-base))) 72%,
+    var(--v2-text-text-faint)
+  );
+  --meristem-scrollbar-thumb-hover: color-mix(
+    in oklab,
+    var(--project-outline-strong, var(--meristem-theme-outline-strong, var(--v2-border-border-strong))) 70%,
+    var(--v2-text-text-muted)
+  );
+
   --meristem-theme-surface-canvas: color-mix(
     in oklab,
     var(--v2-background-bg-accent) 2.5%,
     var(--v2-background-bg-deep)
   );
-  --meristem-theme-surface-soft: color-mix(
-    in oklab,
-    var(--v2-background-bg-accent) 4.5%,
-    var(--v2-background-bg-base)
-  );
+  --meristem-theme-surface-soft: color-mix(in oklab, var(--v2-background-bg-accent) 4.5%, var(--v2-background-bg-base));
   --meristem-theme-surface-high: color-mix(
     in oklab,
     var(--v2-background-bg-accent) 7%,
@@ -491,11 +495,7 @@ body[data-new-layout] {
     var(--v2-background-bg-accent) 20%,
     var(--v2-background-bg-layer-03)
   );
-  --meristem-theme-outline: color-mix(
-    in oklab,
-    var(--v2-background-bg-accent) 32%,
-    var(--v2-border-border-muted)
-  );
+  --meristem-theme-outline: color-mix(in oklab, var(--v2-background-bg-accent) 32%, var(--v2-border-border-muted));
   --meristem-theme-outline-strong: color-mix(
     in oklab,
     var(--v2-background-bg-accent) 48%,
@@ -503,26 +503,52 @@ body[data-new-layout] {
   );
 }
 
+body[data-new-layout],
+body[data-new-layout] :where(*:not(.no-scrollbar)) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--meristem-scrollbar-thumb) var(--meristem-scrollbar-track);
+}
+
+body[data-new-layout]::-webkit-scrollbar,
+body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body[data-new-layout]::-webkit-scrollbar-track,
+body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-track {
+  background: var(--meristem-scrollbar-track);
+}
+
+body[data-new-layout]::-webkit-scrollbar-thumb,
+body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-thumb {
+  min-width: 24px;
+  min-height: 24px;
+  border: 2px solid transparent;
+  border-radius: var(--v2-shape-pill);
+  background: var(--meristem-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+body[data-new-layout]::-webkit-scrollbar-thumb:hover,
+body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-thumb:hover {
+  background: var(--meristem-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+body[data-new-layout]::-webkit-scrollbar-corner,
+body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 body[data-new-layout] [data-project-tint] {
   --project-surface-deep: color-mix(in oklab, var(--project-accent) 3%, var(--v2-background-bg-deep));
   --project-surface-container: color-mix(in oklab, var(--project-accent) 4.5%, var(--v2-background-bg-base));
-  --project-surface-container-high: color-mix(
-    in oklab,
-    var(--project-accent) 7%,
-    var(--v2-background-bg-layer-01)
-  );
+  --project-surface-container-high: color-mix(in oklab, var(--project-accent) 7%, var(--v2-background-bg-layer-01));
   --project-composer-surface: color-mix(in oklab, var(--project-accent) 6%, var(--v2-background-bg-base));
   --project-hover-surface: color-mix(in oklab, var(--project-accent) 8%, var(--v2-background-bg-layer-02));
-  --project-interactive-surface: color-mix(
-    in oklab,
-    var(--project-accent) 14%,
-    var(--v2-background-bg-layer-03)
-  );
-  --project-interactive-strong: color-mix(
-    in oklab,
-    var(--project-accent) 20%,
-    var(--v2-background-bg-layer-03)
-  );
+  --project-interactive-surface: color-mix(in oklab, var(--project-accent) 14%, var(--v2-background-bg-layer-03));
+  --project-interactive-strong: color-mix(in oklab, var(--project-accent) 20%, var(--v2-background-bg-layer-03));
   --project-outline: color-mix(in oklab, var(--project-accent) 32%, var(--v2-border-border-muted));
   --project-outline-strong: color-mix(in oklab, var(--project-accent) 48%, var(--v2-border-border-base));
 }
@@ -560,11 +586,7 @@ body[data-new-layout] [data-titlebar-project-tab][data-project-tint]:not([data-a
 body[data-new-layout]
   [data-component="tabs-v2"][data-variant="normal"][data-orientation="horizontal"]
   [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]) {
-  border-bottom-color: color-mix(
-    in oklab,
-    var(--v2-background-bg-accent) 58%,
-    var(--v2-text-text-faint)
-  );
+  border-bottom-color: color-mix(in oklab, var(--v2-background-bg-accent) 58%, var(--v2-text-text-faint));
 }
 
 body[data-new-layout]
@@ -576,8 +598,7 @@ body[data-new-layout]
 
 /* Custom navigation surfaces should expose keyboard focus as clearly as stock V2 controls. */
 body[data-new-layout] [data-titlebar-tab]:has(> [data-slot="tab-link"]:focus-visible),
-body[data-new-layout]
-  [data-slot="project-tab"]:has(> button:not([data-component="icon-button-v2"]):focus-visible),
+body[data-new-layout] [data-slot="project-tab"]:has(> button:not([data-component="icon-button-v2"]):focus-visible),
 body[data-new-layout]
   :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]):focus-visible {
   outline: 2px solid var(--v2-border-border-focus);
@@ -745,9 +766,7 @@ body[data-new-layout] [data-titlebar-project-tab][data-motion="settle"] {
   animation: meristem-project-settle var(--meristem-motion-layout) var(--meristem-ease-emphasized);
 }
 
-body[data-new-layout]
-  [data-titlebar-project-tab][data-motion="settle"]
-  [data-slot="project-avatar-surface"] {
+body[data-new-layout] [data-titlebar-project-tab][data-motion="settle"] [data-slot="project-avatar-surface"] {
   animation: meristem-avatar-settle 360ms var(--meristem-ease-emphasized);
   transform-origin: center;
 }
@@ -772,9 +791,7 @@ body[data-new-layout] [data-slot="project-tab"] > [data-component="icon-button-v
     background-color var(--meristem-motion-fast) var(--meristem-ease-standard);
 }
 
-body[data-new-layout]
-  [data-slot="project-tab"]:is(:hover, :focus-within)
-  > [data-component="icon-button-v2"] {
+body[data-new-layout] [data-slot="project-tab"]:is(:hover, :focus-within) > [data-component="icon-button-v2"] {
   transform: translateX(0) scale(1);
 }
 
@@ -799,9 +816,7 @@ body[data-new-layout] [data-slot="project-tab"][data-active="true"] button > spa
   transform: scale(1.06);
 }
 
-body[data-new-layout]
-  [data-component="tabs-v2"]
-  [data-slot="tabs-v2-trigger-wrapper"] {
+body[data-new-layout] [data-component="tabs-v2"] [data-slot="tabs-v2-trigger-wrapper"] {
   transition:
     background-color var(--meristem-motion-state) var(--meristem-ease-standard),
     border-color var(--meristem-motion-state) var(--meristem-ease-standard),
@@ -839,11 +854,7 @@ body[data-new-layout] #review-panel {
 }
 
 body[data-new-layout]
-  :is(
-    [data-component="button-v2"],
-    [data-component="icon-button-v2"],
-    [data-action="prompt-submit"]
-  ) {
+  :is([data-component="button-v2"], [data-component="icon-button-v2"], [data-action="prompt-submit"]) {
   transition:
     transform var(--meristem-motion-fast) var(--meristem-ease-standard),
     background-color var(--meristem-motion-fast) var(--meristem-ease-standard),
@@ -853,11 +864,9 @@ body[data-new-layout]
 }
 
 body[data-new-layout]
-  :is(
-    [data-component="button-v2"],
-    [data-component="icon-button-v2"],
-    [data-action="prompt-submit"]
-  ):active:not(:disabled) {
+  :is([data-component="button-v2"], [data-component="icon-button-v2"], [data-action="prompt-submit"]):active:not(
+    :disabled
+  ) {
   transform: scale(0.955);
 }
 
@@ -908,11 +917,9 @@ body[data-new-layout] [data-action="prompt-submit"]:not(:disabled):hover {
   }
 
   body[data-new-layout]
-    :is(
-      [data-component="button-v2"],
-      [data-component="icon-button-v2"],
-      [data-action="prompt-submit"]
-    ):active:not(:disabled) {
+    :is([data-component="button-v2"], [data-component="icon-button-v2"], [data-action="prompt-submit"]):active:not(
+      :disabled
+    ) {
     transform: none;
   }
 
@@ -974,7 +981,8 @@ body[data-new-layout] [data-component="session-middle-panel"] {
   }
 }
 
-body[data-new-layout] [data-slot="file-browser-pathbar"] {
+body[data-new-layout] [data-slot="file-browser-pathbar"],
+body[data-new-layout] [data-slot="source-control-branchbar"] {
   background: var(--project-surface-container-high, var(--meristem-theme-surface-high));
   border-bottom-color: var(--project-outline, var(--meristem-theme-outline));
 }
@@ -994,7 +1002,6 @@ body[data-new-layout] [data-component="workspace-center-page"] > .workspace-cent
     animation: none;
   }
 }
-
 
 /* Meristem interface-wide supporting motion. */
 body[data-new-layout] {
@@ -1038,8 +1045,12 @@ body[data-new-layout] {
 }
 
 @keyframes meristem-scrim-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes meristem-resource-panel-in {
@@ -1098,14 +1109,12 @@ body[data-new-layout] [data-component="menu-v2-item"][data-highlighted] {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  body[data-new-layout]
-    :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):hover {
+  body[data-new-layout] :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):hover {
     transform: translateY(-1px);
   }
 }
 
-body[data-new-layout]
-  :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):active {
+body[data-new-layout] :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):active {
   transform: translateY(0) scale(0.955);
 }
 
@@ -1189,8 +1198,7 @@ body[data-new-layout]
 }
 
 @media (hover: hover) and (pointer: fine) {
-  body[data-new-layout]
-    :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]):hover {
+  body[data-new-layout] :is([data-component="home-project-row"], [data-component="home-recently-closed-row"]):hover {
     transform: translateX(2px);
   }
 }
@@ -1210,10 +1218,8 @@ body[data-new-layout]
   }
 
   body[data-new-layout] [data-component="menu-v2-item"][data-highlighted],
-  body[data-new-layout]
-    :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):hover,
-  body[data-new-layout]
-    :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):active,
+  body[data-new-layout] :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):hover,
+  body[data-new-layout] :is([data-component="button-v2"], [data-component="icon-button-v2"]):not(:disabled):active,
   body[data-new-layout] [data-slot="segmented-control-v2-item"][data-selected],
   body[data-new-layout] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"]:is(:hover, :focus-visible),
   body[data-new-layout]

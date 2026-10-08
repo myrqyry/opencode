@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Frappé — Red",
+  "id": "catppuccin-frapp-red",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3f8",
+      "ink": "#171a27",
+      "primary": "#a8494e",
+      "accent": "#9e552d",
+      "success": "#9c5357",
+      "warning": "#9e552d",
+      "error": "#a8494e",
+      "info": "#9c5357"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#292c3c",
+      "ink": "#c6d0f5",
+      "primary": "#e78284",
+      "accent": "#ef9f76",
+      "success": "#ea999c",
+      "warning": "#ef9f76",
+      "error": "#e78284",
+      "info": "#ea999c"
+    }
+  }
+}

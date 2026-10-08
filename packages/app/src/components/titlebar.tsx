@@ -61,7 +61,11 @@ export function useTitlebarRightMount() {
   return mount
 }
 
-export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visible: boolean; toggle: () => void } }) {
+export function Titlebar(props: {
+  update?: TitlebarUpdate
+  debugTools?: { visible: boolean; toggle: () => void }
+  showChannelIndicator?: boolean
+}) {
   const layout = useLayout()
   const platform = usePlatform()
   const command = useCommand()
@@ -380,15 +384,17 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
                 style={{
                   "padding-left":
                     !sidebarOverlay() && !layout.sidebar.opened()
-                      ? `${Math.max(
-                          0,
-                          Math.min(
-                            Math.max(200, layout.sidebar.width()),
-                            typeof window === "undefined"
-                              ? 720
-                              : Math.max(320, Math.min(720, window.innerWidth * 0.45)),
-                          ) - 48,
-                        ) + (macTrafficLights() ? 8 : 16)}px`
+                      ? `${
+                          Math.max(
+                            0,
+                            Math.min(
+                              Math.max(200, layout.sidebar.width()),
+                              typeof window === "undefined"
+                                ? 720
+                                : Math.max(320, Math.min(720, window.innerWidth * 0.45)),
+                            ) - 48,
+                          ) + (macTrafficLights() ? 8 : 16)
+                        }px`
                       : undefined,
                 }}
               >
@@ -445,7 +451,9 @@ export function Titlebar(props: { update?: TitlebarUpdate; debugTools?: { visibl
                 </TooltipV2>
                 <div class="flex-1" />
                 <TitlebarV2Right state={v2RightState()} />
-                <ChannelIndicator debugTools={props.debugTools} />
+                <Show when={props.showChannelIndicator !== false}>
+                  <ChannelIndicator debugTools={props.debugTools} />
+                </Show>
               </div>
             )
           }}
@@ -660,7 +668,7 @@ function TitlebarUpdateIconButton(props: { state: TitlebarUpdatePillState }) {
   )
 }
 
-function ChannelIndicator(props: { debugTools?: { visible: boolean; toggle: () => void } }) {
+export function ChannelIndicator(props: { debugTools?: { visible: boolean; toggle: () => void } }) {
   const channel = import.meta.env.VITE_OPENCODE_CHANNEL
   if (channel === "dev" && props.debugTools) {
     return (

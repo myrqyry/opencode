@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Frappé — Green",
+  "id": "catppuccin-frapp-green",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3f8",
+      "ink": "#171a27",
+      "primary": "#527934",
+      "accent": "#527934",
+      "success": "#39748d",
+      "warning": "#9e552d",
+      "error": "#a8494e",
+      "info": "#317a71"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#292c3c",
+      "ink": "#c6d0f5",
+      "primary": "#a6d189",
+      "accent": "#a6d189",
+      "success": "#85c1dc",
+      "warning": "#ef9f76",
+      "error": "#e78284",
+      "info": "#81c8be"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Hydrangea 11",
+  "id": "hydrangea-11",
+  "light": {
+    "palette": {
+      "neutral": "#f5f2fb",
+      "ink": "#1c1a18",
+      "primary": "#895c72",
+      "accent": "#706b65",
+      "success": "#865e8a",
+      "warning": "#746d3d",
+      "error": "#895c72",
+      "info": "#7a6761"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#413652",
+      "ink": "#eae4dd",
+      "primary": "#c090a7",
+      "accent": "#eae4dd",
+      "success": "#986f9c",
+      "warning": "#f1eab6",
+      "error": "#c090a7",
+      "info": "#d4beb8"
+    }
+  }
+}

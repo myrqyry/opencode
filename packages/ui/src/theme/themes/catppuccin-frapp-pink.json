@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Frappé — Pink",
+  "id": "catppuccin-frapp-pink",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3f8",
+      "ink": "#171a27",
+      "primary": "#8c577f",
+      "accent": "#895f5f",
+      "success": "#81579a",
+      "warning": "#9e552d",
+      "error": "#a8494e",
+      "info": "#7e6560"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#292c3c",
+      "ink": "#c6d0f5",
+      "primary": "#f4b8e4",
+      "accent": "#eebebe",
+      "success": "#ca9ee6",
+      "warning": "#ef9f76",
+      "error": "#e78284",
+      "info": "#f2d5cf"
+    }
+  }
+}

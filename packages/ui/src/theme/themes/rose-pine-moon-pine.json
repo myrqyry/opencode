@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Rose Pine Moon — Pine",
+  "id": "rose-pine-moon-pine",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3fa",
+      "ink": "#1a1921",
+      "primary": "#1d7494",
+      "accent": "#6b697c",
+      "success": "#9c5352",
+      "warning": "#916106",
+      "error": "#b13a61",
+      "info": "#44757d"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#232136",
+      "ink": "#e0def4",
+      "primary": "#3e8fb0",
+      "accent": "#e0def4",
+      "success": "#ea9a97",
+      "warning": "#f6c177",
+      "error": "#eb6f92",
+      "info": "#9ccfd8"
+    }
+  }
+}

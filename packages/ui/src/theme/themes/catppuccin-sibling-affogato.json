@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Sibling — Affogato",
+  "id": "catppuccin-sibling-affogato",
+  "light": {
+    "palette": {
+      "neutral": "#f7f2ef",
+      "ink": "#201914",
+      "primary": "#885690",
+      "accent": "#895c71",
+      "success": "#3371a0",
+      "warning": "#7e6841",
+      "error": "#a34d56",
+      "info": "#686598"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#23170e",
+      "ink": "#e8d3c5",
+      "primary": "#d9a3e2",
+      "accent": "#f7c3da",
+      "success": "#7bbaed",
+      "warning": "#f9e1b6",
+      "error": "#ef9198",
+      "info": "#bebcf5"
+    }
+  }
+}

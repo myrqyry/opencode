@@ -6,8 +6,11 @@ import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { Icon } from "@opencode-ai/ui/v2/icon"
 import { TextareaV2 } from "@opencode-ai/ui/v2/textarea-v2"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
+import { GitBranchSwitcher } from "@/components/git-branch-switcher"
 import { useLanguage } from "@/context/language"
+import { usePlatform } from "@/context/platform"
 import { useSDK } from "@/context/sdk"
+import { useSync } from "@/context/sync"
 import { formatServerError } from "@/utils/server-errors"
 import { showToast } from "@/utils/toast"
 
@@ -43,9 +46,42 @@ function statusTone(change: Change) {
   return "text-v2-state-fg-warning"
 }
 
+function gitHubUrl(remote: string | undefined) {
+  if (!remote) return
+  const value = remote.trim().replace(/\.git$/, "")
+  const scp = value.match(/^(?:[^@/\s]+@)?github\.com:([^/\s]+)\/([^/\s]+)$/i)
+  if (scp) return `https://github.com/${scp[1]}/${scp[2]}`
+
+  try {
+    const url = new URL(value)
+    if (url.hostname.toLowerCase() !== "github.com") return
+    const parts = url.pathname
+      .split("/")
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length !== 2) return
+    return `https://github.com/${parts[0]}/${parts[1]}`
+  } catch {
+    return
+  }
+}
+
+function gitHubUrlFromConfig(config: string) {
+  const remotes = [...config.matchAll(/\[remote\s+"([^"]+)"\]([\s\S]*?)(?=\n\[|$)/g)]
+    .map((match) => {
+      const url = match[2].match(/^\s*url\s*=\s*(.+)$/m)?.[1]?.trim()
+      return { name: match[1], url: gitHubUrl(url) }
+    })
+    .filter((remote) => !!remote.url)
+
+  return remotes.find((remote) => remote.name === "origin")?.url ?? remotes[0]?.url
+}
+
 export function GitChangesPanel(props: { onSelectFile: (path: string) => void }) {
   const sdk = useSDK()
+  const sync = useSync()
   const language = useLanguage()
+  const platform = usePlatform()
   const [store, setStore] = createStore({
     busy: undefined as Mode | undefined,
     file: undefined as string | undefined,
@@ -70,10 +106,25 @@ export function GitChangesPanel(props: { onSelectFile: (path: string) => void })
         .then((result) => (result.data ?? []) as Change[]),
   }))
 
+  const repositoryFallback = createQuery(() => ({
+    queryKey: ["project-source-control", sdk().directory, "repository-url"] as const,
+    enabled: !sync().data.vcs?.repository_url,
+    staleTime: Infinity,
+    queryFn: () =>
+      sdk()
+        .client.file.read({ path: ".git/config" })
+        .then((result) => {
+          if (result.data?.type !== "text") return
+          return gitHubUrlFromConfig(result.data.content)
+        })
+        .catch(() => undefined),
+  }))
+
   const stagedChanges = () => staged.data ?? empty
   const unstagedChanges = () => unstaged.data ?? empty
+  const branch = createMemo(() => sync().data.vcs?.branch)
+  const repositoryUrl = createMemo(() => sync().data.vcs?.repository_url ?? repositoryFallback.data)
   const loading = () => staged.isPending || unstaged.isPending
-  const hasChanges = createMemo(() => stagedChanges().length > 0 || unstagedChanges().length > 0)
   const canCommit = createMemo(() => stagedChanges().length > 0 && store.message.trim().length > 0 && !store.busy)
 
   const refresh = () => Promise.all([staged.refetch(), unstaged.refetch()])
@@ -206,16 +257,29 @@ export function GitChangesPanel(props: { onSelectFile: (path: string) => void })
   )
   return (
     <div class="flex size-full min-h-0 flex-col overflow-hidden bg-v2-background-bg-base">
-      <div class="flex h-10 shrink-0 items-center border-b border-v2-border-border-muted px-3">
-        <span class="min-w-0 flex-1 truncate text-13-medium text-v2-text-text-base">
-          {language.t("workspace.scm.title")}
-        </span>
-        <Show when={hasChanges()}>
-          <span class="text-11-regular text-v2-text-text-faint">
-            {stagedChanges().length + unstagedChanges().length}
-          </span>
-        </Show>
-      </div>
+      <Show when={branch()}>
+        {(value) => (
+          <div
+            data-slot="source-control-branchbar"
+            class="flex h-10 shrink-0 items-center gap-2 border-b border-v2-border-border-muted px-3"
+          >
+            <GitBranchSwitcher branch={value()} variant="pathbar" />
+            <Show when={repositoryUrl()}>
+              {(url) => (
+                <ButtonV2
+                  size="small"
+                  variant="ghost-muted"
+                  icon="external-link"
+                  class="shrink-0"
+                  onClick={() => platform.openExternal(url())}
+                  aria-label={`${language.t("common.open")} GitHub`}
+                  title={`${language.t("common.open")} GitHub`}
+                />
+              )}
+            </Show>
+          </div>
+        )}
+      </Show>
 
       <Show
         when={!loading()}

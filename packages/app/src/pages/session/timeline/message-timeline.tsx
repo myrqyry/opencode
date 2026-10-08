@@ -12,7 +12,7 @@ import {
   type JSX,
 } from "solid-js"
 import { createStore, produce } from "solid-js/store"
-import { Dynamic } from "solid-js/web"
+import { Dynamic, Portal } from "solid-js/web"
 import { useNavigate } from "@solidjs/router"
 import { useMutation } from "@tanstack/solid-query"
 import { createVirtualizer, defaultRangeExtractor, elementScroll, type VirtualItem } from "@tanstack/solid-virtual"
@@ -274,6 +274,15 @@ export function MessageTimeline(props: {
   const platform = usePlatform()
 
   const [listRoot, setListRoot] = createSignal<HTMLDivElement>()
+  const [inlineActionsMount, setInlineActionsMount] = createSignal<HTMLDivElement>()
+  const [chatTabActionsMount, setChatTabActionsMount] = createSignal<HTMLElement>()
+  const actionMount = createMemo(() =>
+    settings.general.newLayoutDesigns() ? chatTabActionsMount() ?? inlineActionsMount() : inlineActionsMount(),
+  )
+  onMount(() => {
+    const mount = document.getElementById("opencode-chat-tab-actions")
+    if (mount) setChatTabActionsMount(mount)
+  })
   const sessionID = createMemo(() => params.id)
   const sessionStatus = createMemo(() => {
     const id = sessionID()
@@ -329,11 +338,20 @@ export function MessageTimeline(props: {
     if (value) return value
     return language.t("command.session.new")
   })
-  // In the tabbed V2 layout the active chat tab is the session title.
-  // Keep the in-timeline header only for child sessions, where the parent/child
-  // breadcrumb still carries information that the tab itself cannot represent.
+  const [title, setTitle] = createStore({
+    draft: "",
+    editing: false,
+    menuOpen: false,
+    pendingRename: false,
+    pendingShare: false,
+  })
+  let titleRef: HTMLInputElement | undefined
+  // The active V2 chat tab is the root session title. Keep only the inline title editor or
+  // child-session breadcrumb in the timeline; context usage and session actions portal to the
+  // persistent chat-tab strip instead.
+  const showTitle = createMemo(() => !settings.general.newLayoutDesigns() || !!parentID() || title.editing)
   const showHeader = createMemo(() =>
-    settings.general.newLayoutDesigns() ? !!parentID() : !!(titleValue() || parentID()),
+    settings.general.newLayoutDesigns() ? !!sessionID() : !!(titleValue() || parentID()),
   )
   const projection = createTimelineProjection({
     messages: sessionMessages,
@@ -445,7 +463,7 @@ export function MessageTimeline(props: {
     followOnAppend: true,
     scrollEndThreshold: 80,
     get scrollMargin() {
-      return showHeader() ? 64 : 0
+      return showTitle() ? 64 : 0
     },
     overscan: 50,
     paddingEnd: 64,
@@ -555,15 +573,6 @@ export function MessageTimeline(props: {
     props.setScrollToEnd?.(() => {})
     props.setHistoryAnchor?.({ capture: () => {}, restore: () => {} })
   })
-
-  const [title, setTitle] = createStore({
-    draft: "",
-    editing: false,
-    menuOpen: false,
-    pendingRename: false,
-    pendingShare: false,
-  })
-  let titleRef: HTMLInputElement | undefined
 
   const [share, setShare] = createStore({
     open: false,
@@ -1272,7 +1281,7 @@ export function MessageTimeline(props: {
         data-timeline-key={props.rowKey}
         style={{
           position: "absolute",
-          top: `${item().start - (showHeader() ? 64 : 0)}px`,
+          top: `${item().start - (showTitle() ? 64 : 0)}px`,
           left: "0",
           width: "100%",
           height: `${item().size}px`,
@@ -1369,27 +1378,32 @@ export function MessageTimeline(props: {
         onClick={props.onAutoScrollInteraction}
         class="relative min-w-0 w-full h-full"
         style={{
-          "--sticky-accordion-top": showHeader() ? "48px" : "0px",
+          "--sticky-accordion-top": showTitle() ? "48px" : "0px",
         }}
       >
         <Show when={showHeader()}>
           <div
             data-session-title
             classList={{
-              "sticky top-0 z-30": true,
+              "sticky top-0 z-30": showTitle(),
+              contents: !showTitle(),
               "bg-[linear-gradient(to_bottom,var(--v2-background-bg-base)_48px,transparent)]":
-                settings.general.newLayoutDesigns(),
+                settings.general.newLayoutDesigns() && showTitle(),
               "bg-[linear-gradient(to_bottom,var(--background-stronger)_48px,transparent)]":
-                !settings.general.newLayoutDesigns(),
-              "w-full": true,
-              "pb-4": true,
-              "pr-3": true,
-              "pl-2.5": settings.general.newLayoutDesigns(),
-              "pl-2 md:pl-4": !settings.general.newLayoutDesigns(),
+                !settings.general.newLayoutDesigns() && showTitle(),
+              "w-full": showTitle(),
+              "pb-4": showTitle(),
+              "pr-3": showTitle(),
+              "pl-2.5": settings.general.newLayoutDesigns() && showTitle(),
+              "pl-2 md:pl-4": !settings.general.newLayoutDesigns() && showTitle(),
               "md:max-w-200 md:mx-auto 2xl:max-w-[1000px]": props.centered && !settings.general.newLayoutDesigns(),
             }}
           >
-            <div class="h-12 w-full flex items-center justify-between gap-2">
+            <div
+              class="h-12 w-full flex items-center justify-between gap-2"
+              classList={{ hidden: !showTitle() }}
+            >
+              <Show when={showTitle()}>
               <div
                 classList={{
                   "flex items-center gap-1 min-w-0 flex-1": true,
@@ -1470,15 +1484,21 @@ export function MessageTimeline(props: {
                   </Show>
                 </div>
               </div>
+              </Show>
               <Show when={sessionID()} keyed>
                 {(id) => (
-                  <div
-                    classList={{
-                      "shrink-0 flex items-center": true,
-                      "gap-2": settings.general.newLayoutDesigns(),
-                      "gap-3": !settings.general.newLayoutDesigns(),
-                    }}
-                  >
+                  <>
+                    <div ref={setInlineActionsMount} class="contents" />
+                    <Show when={actionMount()} keyed>
+                      {(mount) => (
+                        <Portal mount={mount}>
+                          <div
+                            classList={{
+                              "shrink-0 flex items-center": true,
+                              "gap-2": settings.general.newLayoutDesigns(),
+                              "gap-3": !settings.general.newLayoutDesigns(),
+                            }}
+                          >
                     <SessionContextUsage
                       placement="bottom"
                       buttonAppearance={settings.general.newLayoutDesigns() ? "v2" : "default"}
@@ -1818,7 +1838,11 @@ export function MessageTimeline(props: {
                         </KobaltePopover.Portal>
                       </KobaltePopover>
                     </Show>
-                  </div>
+                          </div>
+                        </Portal>
+                      )}
+                    </Show>
+                  </>
                 )}
               </Show>
             </div>

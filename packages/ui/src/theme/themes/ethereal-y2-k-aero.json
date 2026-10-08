@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Ethereal Y2K Aero",
+  "id": "ethereal-y2-k-aero",
+  "light": {
+    "palette": {
+      "neutral": "#f0f4f7",
+      "ink": "#101d21",
+      "primary": "#0e7a82",
+      "accent": "#33777e",
+      "success": "#077a87",
+      "warning": "#85671a",
+      "error": "#be2d36",
+      "info": "#057892"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#0b1720",
+      "ink": "#d0f4ff",
+      "primary": "#00f0ff",
+      "accent": "#b3f8ff",
+      "success": "#00b8cc",
+      "warning": "#ffd166",
+      "error": "#ff6b6b",
+      "info": "#00d2ff"
+    }
+  }
+}

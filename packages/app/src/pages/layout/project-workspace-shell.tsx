@@ -2,6 +2,7 @@ import { createMemo, onCleanup, Show, type ParentProps } from "solid-js"
 import { Portal } from "solid-js/web"
 import { createQuery, useQueryClient } from "@tanstack/solid-query"
 import { SessionHeaderV2Actions } from "@/components/session/session-header-v2-actions"
+import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { useTitlebarRightMount } from "@/components/titlebar"
 import { CommentsProvider } from "@/context/comments"
 import { FileProvider, useFile } from "@/context/file"
@@ -192,7 +193,12 @@ function ProjectWorkspaceFrame(
   )
 
   const panelOpen = createMemo(() => settings.visibility.fileTree() && layout.fileTree.opened())
-  const width = createMemo(() => Math.max(320, Math.min(560, layout.fileTree.width())))
+  const panelMin = 280
+  const panelMax = () => (typeof window === "undefined" ? 720 : Math.max(360, Math.min(720, window.innerWidth * 0.5)))
+  const width = createMemo(() => Math.max(panelMin, Math.min(panelMax(), layout.fileTree.width())))
+  const closePanel = () => {
+    layout.fileTree.close()
+  }
 
   return (
     <div class="flex size-full min-h-0 min-w-0 bg-project-canvas">
@@ -209,7 +215,22 @@ function ProjectWorkspaceFrame(
       </div>
 
       <Show when={panelOpen()}>
-        <div class="hidden h-full shrink-0 md:flex pl-2" style={{ width: `${width() + 8}px` }}>
+        <div class="relative hidden h-full shrink-0 md:flex pl-2" style={{ width: `${width() + 8}px` }}>
+          <div onPointerDown={size.start}>
+            <ResizeHandle
+              direction="horizontal"
+              edge="start"
+              size={width()}
+              min={panelMin}
+              max={panelMax()}
+              collapseThreshold={210}
+              onCollapse={closePanel}
+              onResize={(next) => {
+                size.touch()
+                layout.fileTree.resize(next)
+              }}
+            />
+          </div>
           <SessionSidePanel
             canReview={() => !!sync().project}
             diffs={diffs}

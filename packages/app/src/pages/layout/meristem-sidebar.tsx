@@ -28,10 +28,12 @@ import { createPathHelpers } from "@/context/file/path"
 import { SessionRouteKey, SessionStateKey } from "@/utils/server-scope"
 import { base64Encode } from "@opencode-ai/core/util/encode"
 import { getFilename } from "@opencode-ai/core/util/path"
+import { ChannelIndicator } from "@/components/titlebar"
 import "./meristem-sidebar.css"
 
-const SECTION_LABEL =
-  "px-2 text-[11px] font-[600] uppercase tracking-[0.06em] text-v2-text-text-faint"
+const SECTION_LABEL = "px-2 text-[11px] font-[600] uppercase tracking-[0.06em] text-v2-text-text-faint"
+
+const SHOW_CHANNEL_INDICATOR = ["beta", "dev"].includes(import.meta.env.VITE_OPENCODE_CHANNEL)
 
 function Section(props: {
   title: string
@@ -245,7 +247,10 @@ function ProjectTreeRow(props: {
             project-actions transform in meristem-sidebar.css. Tailwind v4 emits translate
             utilities to the `translate` property, which composes with `transform` rather than
             overriding it, so having both applied the -50% offset twice. */}
-        <div data-slot="project-actions" class="pointer-events-none absolute right-1 top-1/2 z-10 flex items-center gap-px opacity-0 transition-opacity group-hover/project:opacity-100 group-focus-within/project:opacity-100">
+        <div
+          data-slot="project-actions"
+          class="pointer-events-none absolute right-1 top-1/2 z-10 flex items-center gap-px opacity-0 transition-opacity group-hover/project:opacity-100 group-focus-within/project:opacity-100"
+        >
           <TooltipV2 placement="top" value="New chat">
             <button
               type="button"
@@ -307,9 +312,13 @@ function CollapsedRail(props: {
   onNewSession: () => void
   onSettings: () => void
   onProject: (project: LocalProject) => void
+  debugTools?: { visible: boolean; toggle: () => void }
 }) {
   return (
-    <aside data-component="meristem-sidebar-rail" class="flex h-full w-12 shrink-0 flex-col items-center border-r border-v2-border-border-muted bg-v2-background-bg-deep">
+    <aside
+      data-component="meristem-sidebar-rail"
+      class="flex h-full w-12 shrink-0 flex-col items-center border-r border-v2-border-border-muted bg-v2-background-bg-deep"
+    >
       <div class="flex h-9 w-full shrink-0 items-center justify-center border-b border-v2-border-border-muted">
         <TooltipV2 placement="right" value="Open sidebar">
           <IconButtonV2
@@ -358,12 +367,17 @@ function CollapsedRail(props: {
             onClick={props.onSettings}
           />
         </TooltipV2>
+        <Show when={SHOW_CHANNEL_INDICATOR}>
+          <div class="mt-2 flex w-full justify-center">
+            <ChannelIndicator debugTools={props.debugTools} />
+          </div>
+        </Show>
       </div>
     </aside>
   )
 }
 
-export function MeristemSidebar() {
+export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle: () => void } }) {
   const layout = useLayout()
   const command = useCommand()
   const tabs = useTabs()
@@ -396,10 +410,10 @@ export function MeristemSidebar() {
     const route = layout.route()
     if (route.type === "session")
       return tabs.store.find(
-        (tab) => tab.type === "session" && tab.server === (route.server ?? server.key) && tab.sessionId === route.sessionId,
+        (tab) =>
+          tab.type === "session" && tab.server === (route.server ?? server.key) && tab.sessionId === route.sessionId,
       )
-    if (route.type === "draft")
-      return tabs.store.find((tab) => tab.type === "draft" && tab.draftID === route.draftID)
+    if (route.type === "draft") return tabs.store.find((tab) => tab.type === "draft" && tab.draftID === route.draftID)
     if (route.type === "workspace")
       return tabs.store.find(
         (tab) =>
@@ -563,10 +577,7 @@ export function MeristemSidebar() {
     if (params.id) {
       command.trigger("review.open")
     } else {
-      const key = SessionStateKey.from(
-        serverSDK().scope,
-        SessionRouteKey.fromRoute(base64Encode(directory)),
-      )
+      const key = SessionStateKey.from(serverSDK().scope, SessionRouteKey.fromRoute(base64Encode(directory)))
       layout.view(key).reviewPanel.open()
     }
 
@@ -581,10 +592,7 @@ export function MeristemSidebar() {
     const sessionID = params.id
     if (!directory || !sessionID) return
 
-    const key = SessionStateKey.from(
-      server.scope(),
-      SessionRouteKey.fromRoute(base64Encode(directory), sessionID),
-    )
+    const key = SessionStateKey.from(server.scope(), SessionRouteKey.fromRoute(base64Encode(directory), sessionID))
     const resourceTabs = layout.tabs(key)
     const fileTab = createPathHelpers(() => directory).tab(path)
 
@@ -614,6 +622,7 @@ export function MeristemSidebar() {
               onNewSession={newSession}
               onSettings={() => openWorkspaceView("settings")}
               onProject={openProjectFromRail}
+              debugTools={props.debugTools}
             />
           </Show>
         }
@@ -629,217 +638,220 @@ export function MeristemSidebar() {
             width: mobile() ? "min(360px, calc(100vw - 24px))" : `${Math.min(sidebarWidth(), sidebarMax())}px`,
           }}
         >
-        <div class="flex shrink-0 flex-col gap-2 px-2 pb-2">
-          <div
-            data-slot="project-context-header"
-            class="flex h-9 min-w-0 items-center gap-2 border-b border-v2-border-border-muted px-1.5"
-          >
-            <Show
-              when={activeProject()}
-              fallback={<span class="min-w-0 flex-1 truncate text-[13px] font-[600] text-v2-text-text-muted">Projects</span>}
+          <div class="flex shrink-0 flex-col gap-2 px-2 pb-2">
+            <div
+              data-slot="project-context-header"
+              class="flex h-9 min-w-0 items-center gap-2 border-b border-v2-border-border-muted px-1.5"
             >
-              {(project) => (
-                <>
-                  <ProjectMark project={project()} size="small" />
-                  <span class="min-w-0 flex-1 truncate text-[13px] font-[600] tracking-[-0.01em] text-v2-text-text-base">
-                    {displayName(project())}
-                  </span>
-                </>
-              )}
-            </Show>
-            <TooltipV2 placement="right" value={mobile() ? "Close sidebar" : "Collapse sidebar"}>
-              <IconButtonV2
-                variant="ghost-muted"
-                size="small"
-                icon={<IconV2 name="sidebar-left" size="small" />}
-                state={!mobile() && layout.sidebar.opened() ? "pressed" : undefined}
-                aria-label={mobile() ? "Close sidebar" : "Collapse sidebar"}
-                onClick={collapseSidebar}
-              />
-            </TooltipV2>
-          </div>
-          <label class="flex h-8 items-center gap-2 rounded-[12px] bg-v2-background-bg-layer-01 px-2 text-v2-icon-icon-muted shadow-[inset_1px_1px_3px_var(--v2-alpha-dark-10),inset_-1px_-1px_2px_var(--v2-alpha-light-6)]">
-            <IconV2 name="magnifying-glass" size="small" />
-            <input
-              value={ui.search}
-              onInput={(event) => setUi("search", event.currentTarget.value)}
-              placeholder="Search chats & files"
-              class="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-v2-text-text-base outline-none placeholder:text-v2-text-text-faint"
-            />
-          </label>
-        </div>
-        <div class="min-h-0 flex-1 overflow-y-auto px-2 pb-3 [scrollbar-width:thin]">
-          <div class="flex flex-col gap-3">
-            <Section
-              title="Workspace"
-              open={() => ui.sections.workspace}
-              onToggle={() => toggleSection("workspace")}
-            >
-              <div class="flex flex-col gap-px">
-                <SidebarRow
-                  label="Files"
-                  selected={
-                    settings.visibility.fileTree() && layout.fileTree.opened() && layout.fileTree.tab() === "all"
-                  }
-                  onClick={() => showWorkspacePanel("files")}
-                  icon={<IconV2 name="file-tree" size="small" />}
-                />
-                <SidebarRow
-                  label="Changes"
-                  selected={
-                    settings.visibility.fileTree() && layout.fileTree.opened() && layout.fileTree.tab() === "changes"
-                  }
-                  onClick={() => showWorkspacePanel("changes")}
-                  icon={<IconV2 name="branch" size="small" />}
-                />
-                <SidebarRow
-                  label="Models"
-                  selected={workspaceView() === "models"}
-                  onClick={() => openWorkspaceView("models")}
-                  icon={<IconV2 name="models" size="small" />}
-                />
-                <SidebarRow
-                  label="Providers"
-                  selected={workspaceView() === "providers"}
-                  onClick={() => openWorkspaceView("providers")}
-                  icon={<IconV2 name="providers" size="small" />}
-                />
-                <SidebarRow
-                  label="Skills"
-                  selected={workspaceView() === "skills"}
-                  onClick={() => openWorkspaceView("skills")}
-                  icon={<IconV2 name="skills" size="small" />}
-                />
-                <SidebarRow
-                  label="Settings"
-                  selected={workspaceView() === "settings"}
-                  onClick={() => openWorkspaceView("settings")}
-                  icon={<IconV2 name="settings-gear" size="small" />}
-                />
-              </div>
-            </Section>
-
-            <Show when={searchQuery().length >= 2 && !!currentDirectory() && !!params.id}>
-              <section class="flex min-w-0 flex-col gap-1">
-                <div class="flex h-7 items-center px-2">
-                  <span class={SECTION_LABEL}>Files</span>
-                </div>
-                <Show
-                  when={!fileMatches.loading}
-                  fallback={<div class="px-2 py-1 text-[12px] text-v2-text-text-faint">Searching files…</div>}
-                >
-                  <Show
-                    when={(fileMatches() ?? []).length > 0}
-                    fallback={<div class="px-2 py-1 text-[12px] text-v2-text-text-faint">No matching files</div>}
-                  >
-                    <div class="flex min-w-0 flex-col gap-px">
-                      <For each={fileMatches() ?? []}>
-                        {(path) => (
-                          <button
-                            type="button"
-                            class="group flex min-h-9 w-full min-w-0 items-center gap-2 rounded-[10px] px-2 py-1 text-left text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
-                            title={path}
-                            onClick={() => void openFileMatch(path)}
-                          >
-                            <span class="flex size-5 shrink-0 items-center justify-center">
-                              <IconV2 name="file-tree" size="small" />
-                            </span>
-                            <span class="min-w-0 flex-1">
-                              <span class="block truncate text-[13px] [font-weight:480] text-v2-text-text-base">
-                                {getFilename(path)}
-                              </span>
-                              <span class="block truncate text-[10px] text-v2-text-text-faint">{path}</span>
-                            </span>
-                          </button>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
-                </Show>
-              </section>
-            </Show>
-
-            <section class="flex min-w-0 flex-col gap-1">
-              <div class="flex h-7 items-center px-2">
-                <span class={SECTION_LABEL}>Chats</span>
-              </div>
-              <SidebarRow label="New chat" onClick={newSession} icon={<IconV2 name="new-chat" size="small" />} />
               <Show
                 when={activeProject()}
-                keyed
-                fallback={<div class="px-2 py-1 text-[12px] text-v2-text-text-faint">No active project</div>}
+                fallback={
+                  <span class="min-w-0 flex-1 truncate text-[13px] font-[600] text-v2-text-text-muted">Projects</span>
+                }
               >
                 {(project) => (
-                  <ProjectSessions
-                    project={project}
-                    expanded={() => true}
-                    search={() => ui.search}
-                    onOpenSession={openSession}
-                    selectedSessionID={currentRootSessionID}
-                    nested={false}
-                  />
+                  <>
+                    <ProjectMark project={project()} size="small" />
+                    <span class="min-w-0 flex-1 truncate text-[13px] font-[600] tracking-[-0.01em] text-v2-text-text-base">
+                      {displayName(project())}
+                    </span>
+                  </>
                 )}
               </Show>
-            </section>
-
-            <Section
-              title="Projects"
-              open={() => ui.sections.projects}
-              onToggle={() => toggleSection("projects")}
-              action={
-                <TooltipV2 placement="right" value="Open project">
-                  <IconButtonV2
-                    variant="ghost-muted"
-                    size="small"
-                    icon={<IconV2 name="folder-add-left" size="small" />}
-                    aria-label="Open project"
-                    onClick={() => {
-                      const conn = server.current
-                      if (conn) projectsController.project.choose(conn)
-                    }}
+              <TooltipV2 placement="right" value={mobile() ? "Close sidebar" : "Collapse sidebar"}>
+                <IconButtonV2
+                  variant="ghost-muted"
+                  size="small"
+                  icon={<IconV2 name="sidebar-left" size="small" />}
+                  state={!mobile() && layout.sidebar.opened() ? "pressed" : undefined}
+                  aria-label={mobile() ? "Close sidebar" : "Collapse sidebar"}
+                  onClick={collapseSidebar}
+                />
+              </TooltipV2>
+            </div>
+            <label class="flex h-8 items-center gap-2 rounded-[12px] bg-v2-background-bg-layer-01 px-2 text-v2-icon-icon-muted shadow-[inset_1px_1px_3px_var(--v2-alpha-dark-10),inset_-1px_-1px_2px_var(--v2-alpha-light-6)]">
+              <IconV2 name="magnifying-glass" size="small" />
+              <input
+                value={ui.search}
+                onInput={(event) => setUi("search", event.currentTarget.value)}
+                placeholder="Search chats & files"
+                class="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-v2-text-text-base outline-none placeholder:text-v2-text-text-faint"
+              />
+            </label>
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto px-2 pb-3 [scrollbar-width:thin]">
+            <div class="flex flex-col gap-3">
+              <Section title="Workspace" open={() => ui.sections.workspace} onToggle={() => toggleSection("workspace")}>
+                <div class="flex flex-col gap-px">
+                  <SidebarRow
+                    label="Files"
+                    selected={
+                      settings.visibility.fileTree() && layout.fileTree.opened() && layout.fileTree.tab() === "all"
+                    }
+                    onClick={() => showWorkspacePanel("files")}
+                    icon={<IconV2 name="file-tree" size="small" />}
                   />
-                </TooltipV2>
-              }
-            >
-              <div class="flex flex-col gap-px">
-                <For each={projects()}>
+                  <SidebarRow
+                    label="Changes"
+                    selected={
+                      settings.visibility.fileTree() && layout.fileTree.opened() && layout.fileTree.tab() === "changes"
+                    }
+                    onClick={() => showWorkspacePanel("changes")}
+                    icon={<IconV2 name="branch" size="small" />}
+                  />
+                  <SidebarRow
+                    label="Models"
+                    selected={workspaceView() === "models"}
+                    onClick={() => openWorkspaceView("models")}
+                    icon={<IconV2 name="models" size="small" />}
+                  />
+                  <SidebarRow
+                    label="Providers"
+                    selected={workspaceView() === "providers"}
+                    onClick={() => openWorkspaceView("providers")}
+                    icon={<IconV2 name="providers" size="small" />}
+                  />
+                  <SidebarRow
+                    label="Skills"
+                    selected={workspaceView() === "skills"}
+                    onClick={() => openWorkspaceView("skills")}
+                    icon={<IconV2 name="skills" size="small" />}
+                  />
+                  <SidebarRow
+                    label="Settings"
+                    selected={workspaceView() === "settings"}
+                    onClick={() => openWorkspaceView("settings")}
+                    icon={<IconV2 name="settings-gear" size="small" />}
+                  />
+                </div>
+              </Section>
+
+              <Show when={searchQuery().length >= 2 && !!currentDirectory() && !!params.id}>
+                <section class="flex min-w-0 flex-col gap-1">
+                  <div class="flex h-7 items-center px-2">
+                    <span class={SECTION_LABEL}>Files</span>
+                  </div>
+                  <Show
+                    when={!fileMatches.loading}
+                    fallback={<div class="px-2 py-1 text-[12px] text-v2-text-text-faint">Searching files…</div>}
+                  >
+                    <Show
+                      when={(fileMatches() ?? []).length > 0}
+                      fallback={<div class="px-2 py-1 text-[12px] text-v2-text-text-faint">No matching files</div>}
+                    >
+                      <div class="flex min-w-0 flex-col gap-px">
+                        <For each={fileMatches() ?? []}>
+                          {(path) => (
+                            <button
+                              type="button"
+                              class="group flex min-h-9 w-full min-w-0 items-center gap-2 rounded-[10px] px-2 py-1 text-left text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
+                              title={path}
+                              onClick={() => void openFileMatch(path)}
+                            >
+                              <span class="flex size-5 shrink-0 items-center justify-center">
+                                <IconV2 name="file-tree" size="small" />
+                              </span>
+                              <span class="min-w-0 flex-1">
+                                <span class="block truncate text-[13px] [font-weight:480] text-v2-text-text-base">
+                                  {getFilename(path)}
+                                </span>
+                                <span class="block truncate text-[10px] text-v2-text-text-faint">{path}</span>
+                              </span>
+                            </button>
+                          )}
+                        </For>
+                      </div>
+                    </Show>
+                  </Show>
+                </section>
+              </Show>
+
+              <section class="flex min-w-0 flex-col gap-1">
+                <div class="flex h-7 items-center px-2">
+                  <span class={SECTION_LABEL}>Chats</span>
+                </div>
+                <SidebarRow label="New chat" onClick={newSession} icon={<IconV2 name="new-chat" size="small" />} />
+                <Show
+                  when={activeProject()}
+                  keyed
+                  fallback={<div class="px-2 py-1 text-[12px] text-v2-text-text-faint">No active project</div>}
+                >
                   {(project) => (
-                    <ProjectTreeRow
+                    <ProjectSessions
                       project={project}
-                      expanded={expanded(project)}
-                      selected={() => selectedProject(project)}
+                      expanded={() => true}
                       search={() => ui.search}
-onToggle={() => toggleProject(project)}
-                    onOpen={() => openProject(project)}
-                    onOpenSession={openSession}
+                      onOpenSession={openSession}
                       selectedSessionID={currentRootSessionID}
-                      onNewSession={() => newSessionFor(project)}
-                      onSettings={() => {
-                        const conn = server.current
-                        if (conn) projectsController.project.edit(conn, project)
-                      }}
-                      onRemove={() => {
-                        const conn = server.current
-                        if (conn) projectsController.project.close(conn, project.worktree)
-                      }}
+                      nested={false}
                     />
                   )}
-                </For>
-              </div>
-            </Section>
+                </Show>
+              </section>
+
+              <Section
+                title="Projects"
+                open={() => ui.sections.projects}
+                onToggle={() => toggleSection("projects")}
+                action={
+                  <TooltipV2 placement="right" value="Open project">
+                    <IconButtonV2
+                      variant="ghost-muted"
+                      size="small"
+                      icon={<IconV2 name="folder-add-left" size="small" />}
+                      aria-label="Open project"
+                      onClick={() => {
+                        const conn = server.current
+                        if (conn) projectsController.project.choose(conn)
+                      }}
+                    />
+                  </TooltipV2>
+                }
+              >
+                <div class="flex flex-col gap-px">
+                  <For each={projects()}>
+                    {(project) => (
+                      <ProjectTreeRow
+                        project={project}
+                        expanded={expanded(project)}
+                        selected={() => selectedProject(project)}
+                        search={() => ui.search}
+                        onToggle={() => toggleProject(project)}
+                        onOpen={() => openProject(project)}
+                        onOpenSession={openSession}
+                        selectedSessionID={currentRootSessionID}
+                        onNewSession={() => newSessionFor(project)}
+                        onSettings={() => {
+                          const conn = server.current
+                          if (conn) projectsController.project.edit(conn, project)
+                        }}
+                        onRemove={() => {
+                          const conn = server.current
+                          if (conn) projectsController.project.close(conn, project.worktree)
+                        }}
+                      />
+                    )}
+                  </For>
+                </div>
+              </Section>
+            </div>
           </div>
-        </div>
-        <Show when={!mobile()}>
-          <div class="absolute inset-y-0 end-0 z-30 w-0 overflow-visible">
-            <ResizeHandle
-              direction="horizontal"
-              size={Math.min(sidebarWidth(), sidebarMax())}
-              min={200}
-              max={sidebarMax()}
-              onResize={(width) => layout.sidebar.resize(width)}
-            />
-          </div>
-        </Show>
+          <Show when={SHOW_CHANNEL_INDICATOR}>
+            <div class="flex h-9 shrink-0 items-center border-t border-v2-border-border-muted px-3">
+              <ChannelIndicator debugTools={props.debugTools} />
+            </div>
+          </Show>
+          <Show when={!mobile()}>
+            <div class="absolute inset-y-0 end-0 z-30 w-0 overflow-visible">
+              <ResizeHandle
+                direction="horizontal"
+                size={Math.min(sidebarWidth(), sidebarMax())}
+                min={200}
+                max={sidebarMax()}
+                onResize={(width) => layout.sidebar.resize(width)}
+              />
+            </div>
+          </Show>
         </aside>
       </Show>
     </>

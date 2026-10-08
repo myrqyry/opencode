@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "SLSO8 Pixels",
+  "id": "slso8-pixels",
+  "light": {
+    "palette": {
+      "neutral": "#ecf5fd",
+      "ink": "#201911",
+      "primary": "#9f552d",
+      "accent": "#896335",
+      "success": "#846071",
+      "warning": "#796955",
+      "error": "#9d5803",
+      "info": "#9d5803"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#0d2b45",
+      "ink": "#ffecd6",
+      "primary": "#d08159",
+      "accent": "#ffd4a3",
+      "success": "#8d697a",
+      "warning": "#ffecd6",
+      "error": "#ffaa5e",
+      "info": "#ffaa5e"
+    }
+  }
+}

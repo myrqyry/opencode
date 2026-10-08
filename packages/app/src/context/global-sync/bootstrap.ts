@@ -427,7 +427,11 @@ export async function bootstrapDirectory(input: {
         retry(async () => {
           if ((await input.protocol) !== "v1") return
           return input.sdk.vcs.get().then((result) => {
-            const next = { branch: result.data?.branch, default_branch: result.data?.default_branch }
+            const next = {
+              branch: result.data?.branch,
+              default_branch: result.data?.default_branch,
+              repository_url: result.data?.repository_url,
+            }
             input.setStore("vcs", next)
             if (next) input.vcsCache.setStore("value", next)
           })

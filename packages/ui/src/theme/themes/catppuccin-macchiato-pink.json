@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Macchiato — Pink",
+  "id": "catppuccin-macchiato-pink",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3f9",
+      "ink": "#171a26",
+      "primary": "#8a597e",
+      "accent": "#856161",
+      "success": "#7c57a6",
+      "warning": "#9c572e",
+      "error": "#a74859",
+      "info": "#7c6662"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1e2030",
+      "ink": "#cad3f5",
+      "primary": "#f5bde6",
+      "accent": "#f0c6c6",
+      "success": "#c6a0f6",
+      "warning": "#f5a97f",
+      "error": "#ed8796",
+      "info": "#f4dbd6"
+    }
+  }
+}

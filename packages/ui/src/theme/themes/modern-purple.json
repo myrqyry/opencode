@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Modern Purple",
+  "id": "modern-purple",
+  "light": {
+    "palette": {
+      "neutral": "#f4f2fe",
+      "ink": "#1b1b1b",
+      "primary": "#545ed0",
+      "accent": "#ab445b",
+      "success": "#375dda",
+      "warning": "#ac492a",
+      "error": "#99545f",
+      "info": "#ba304c"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1b1133",
+      "ink": "#e2e2e2",
+      "primary": "#6471e4",
+      "accent": "#ff8fa3",
+      "success": "#375dda",
+      "warning": "#f78c6c",
+      "error": "#ce838e",
+      "info": "#e85c71"
+    }
+  }
+}

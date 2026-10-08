@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Evondev Author Contrast",
+  "id": "evondev-author-contrast",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3fb",
+      "ink": "#1a1a1b",
+      "primary": "#bc1e6f",
+      "accent": "#806557",
+      "success": "#9839b4",
+      "warning": "#6d7217",
+      "error": "#c81327",
+      "info": "#9b5835"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1e1f35",
+      "ink": "#f8f8fa",
+      "primary": "#fe4e9f",
+      "accent": "#ffe0d0",
+      "success": "#c96ae7",
+      "warning": "#f1fa8c",
+      "error": "#ff5555",
+      "info": "#ffb48f"
+    }
+  }
+}

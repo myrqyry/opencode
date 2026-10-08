@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Twitch Dark",
+  "id": "twitch-dark",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f4",
+      "ink": "#1a1a1b",
+      "primary": "#802dea",
+      "accent": "#73638b",
+      "success": "#772ce8",
+      "warning": "#8c631a",
+      "error": "#b13a61",
+      "info": "#7d49c6"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#0e0e10",
+      "ink": "#efeff1",
+      "primary": "#9146ff",
+      "accent": "#e3d1ff",
+      "success": "#772ce8",
+      "warning": "#ffb000",
+      "error": "#eb6f92",
+      "info": "#af7eff"
+    }
+  }
+}

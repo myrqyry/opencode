@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Ethereal Default",
+  "id": "ethereal-default",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f5",
+      "ink": "#161b20",
+      "primary": "#3e7199",
+      "accent": "#696c6f",
+      "success": "#3271a1",
+      "warning": "#85671a",
+      "error": "#be2d36",
+      "info": "#606e7a"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#07080c",
+      "ink": "#e2f1ff",
+      "primary": "#9cd2ff",
+      "accent": "#f8fbff",
+      "success": "#6baadd",
+      "warning": "#ffd166",
+      "error": "#ff6b6b",
+      "info": "#e2f1ff"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Mocha",
+  "id": "catppuccin-mocha",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f8",
+      "ink": "#171a25",
+      "primary": "#7c58a3",
+      "accent": "#885b7c",
+      "success": "#446bac",
+      "warning": "#99592f",
+      "error": "#a64665",
+      "info": "#5f66a0"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#181825",
+      "ink": "#cdd6f4",
+      "primary": "#cba6f7",
+      "accent": "#f5c2e7",
+      "success": "#89b4fa",
+      "warning": "#fab387",
+      "error": "#f38ba8",
+      "info": "#b4befe"
+    }
+  }
+}

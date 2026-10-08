@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Macchiato — Red",
+  "id": "catppuccin-macchiato-red",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3f9",
+      "ink": "#171a26",
+      "primary": "#a74859",
+      "accent": "#9c572e",
+      "success": "#9e5159",
+      "warning": "#9c572e",
+      "error": "#a74859",
+      "info": "#9e5159"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1e2030",
+      "ink": "#cad3f5",
+      "primary": "#ed8796",
+      "accent": "#f5a97f",
+      "success": "#ee99a0",
+      "warning": "#f5a97f",
+      "error": "#ed8796",
+      "info": "#ee99a0"
+    }
+  }
+}

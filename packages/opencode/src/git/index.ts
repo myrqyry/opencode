@@ -75,6 +75,7 @@ export interface Options {
 export interface Interface {
   readonly run: (args: string[], opts: Options) => Effect.Effect<Result>
   readonly branch: (cwd: string) => Effect.Effect<string | undefined>
+  readonly remoteUrl: (cwd: string) => Effect.Effect<string | undefined>
   readonly prefix: (cwd: string) => Effect.Effect<string>
   readonly defaultBranch: (cwd: string) => Effect.Effect<Base | undefined>
   readonly hasHead: (cwd: string) => Effect.Effect<boolean>
@@ -163,6 +164,15 @@ const layer = Layer.effect(
 
     const branch = Effect.fn("Git.branch")(function* (cwd: string) {
       const result = yield* run(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd })
+      if (result.exitCode !== 0) return
+      const text = out(result)
+      return text || undefined
+    })
+
+    const remoteUrl = Effect.fn("Git.remoteUrl")(function* (cwd: string) {
+      const remote = yield* primary(cwd)
+      if (!remote) return
+      const result = yield* run(["remote", "get-url", remote], { cwd })
       if (result.exitCode !== 0) return
       const text = out(result)
       return text || undefined
@@ -326,6 +336,7 @@ const layer = Layer.effect(
     return Service.of({
       run,
       branch,
+      remoteUrl,
       prefix,
       defaultBranch,
       hasHead,

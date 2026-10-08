@@ -29,6 +29,8 @@ export const PRUNE_MINIMUM = 20_000
 export const PRUNE_PROTECT = 40_000
 const TOOL_OUTPUT_MAX_CHARS = 2_000
 const PRUNE_PROTECTED_TOOLS = ["skill"]
+// Keep a short causal window of visual tool-result turns so the model can verify recent UI actions.
+const PRUNE_PROTECT_VISUAL_TURNS = 3
 const MIN_PRESERVE_RECENT_TOKENS = 2_000
 const MAX_PRESERVE_RECENT_TOKENS = 15_000
 type Turn = {
@@ -284,18 +286,35 @@ const layer = Layer.effect(
       let pruned = 0
       const toPrune: SessionV1.ToolPart[] = []
       let turns = 0
+      let visualTurns = 0
 
       loop: for (let msgIndex = msgs.length - 1; msgIndex >= 0; msgIndex--) {
         const msg = msgs[msgIndex]
         if (msg.info.role === "user") turns++
-        if (turns < 2) continue
         if (msg.info.role === "assistant" && msg.info.summary) break loop
+        const hasVisualObservation =
+          msg.info.role === "assistant" &&
+          msg.parts.some(
+            (part) =>
+              part.type === "tool" &&
+              part.state.status === "completed" &&
+              !part.state.time.compacted &&
+              part.state.attachments?.some((attachment) => attachment.mime.startsWith("image/")),
+          )
+        const protectVisualObservation = hasVisualObservation && visualTurns < PRUNE_PROTECT_VISUAL_TURNS
+        if (hasVisualObservation) visualTurns++
+        if (turns < 2) continue
         for (let partIndex = msg.parts.length - 1; partIndex >= 0; partIndex--) {
           const part = msg.parts[partIndex]
           if (part.type !== "tool") continue
           if (part.state.status !== "completed") continue
           if (PRUNE_PROTECTED_TOOLS.includes(part.tool)) continue
           if (part.state.time.compacted) break loop
+          if (
+            protectVisualObservation &&
+            part.state.attachments?.some((attachment) => attachment.mime.startsWith("image/"))
+          )
+            continue
           const estimate = Token.estimate(part.state.output)
           total += estimate
           if (total <= PRUNE_PROTECT) continue

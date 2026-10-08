@@ -4,6 +4,7 @@ import { formatPatch, structuredPatch } from "diff"
 import { InstanceState } from "@/effect/instance-state"
 import { Watcher } from "@opencode-ai/core/filesystem/watcher"
 import { Git } from "@/git"
+import { parseRepositoryReference } from "@/util/repository"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { VcsEvent } from "@opencode-ai/schema/vcs-event"
@@ -355,6 +356,7 @@ export const Event = VcsEvent
 export const Info = Schema.Struct({
   branch: Schema.optional(Schema.String),
   default_branch: Schema.optional(Schema.String),
+  repository_url: Schema.optional(Schema.String),
 }).annotate({ identifier: "VcsInfo" })
 export type Info = Schema.Schema.Type<typeof Info>
 
@@ -398,6 +400,22 @@ export const CommitInput = Schema.Struct({
 })
 export type CommitInput = Schema.Schema.Type<typeof CommitInput>
 
+export const BranchInfo = Schema.Struct({
+  name: Schema.String,
+  current: Schema.Boolean,
+}).annotate({ identifier: "VcsBranchInfo" })
+export type BranchInfo = Schema.Schema.Type<typeof BranchInfo>
+
+export const SwitchBranchInput = Schema.Struct({
+  branch: Schema.String,
+})
+export type SwitchBranchInput = Schema.Schema.Type<typeof SwitchBranchInput>
+
+export const SwitchBranchResult = Schema.Struct({
+  branch: Schema.String,
+}).annotate({ identifier: "VcsSwitchBranchResult" })
+export type SwitchBranchResult = Schema.Schema.Type<typeof SwitchBranchResult>
+
 export const ChangeResult = Schema.Struct({
   changed: Schema.Boolean,
 })
@@ -423,6 +441,9 @@ export interface Interface {
   readonly init: () => Effect.Effect<void>
   readonly branch: () => Effect.Effect<string | undefined>
   readonly defaultBranch: () => Effect.Effect<string | undefined>
+  readonly repositoryUrl: () => Effect.Effect<string | undefined>
+  readonly branches: () => Effect.Effect<BranchInfo[]>
+  readonly switchBranch: (input: SwitchBranchInput) => Effect.Effect<SwitchBranchResult, OperationError>
   readonly status: () => Effect.Effect<FileStatus[]>
   readonly diff: (mode: Mode, options?: DiffOptions) => Effect.Effect<FileDiff[]>
   readonly diffRaw: () => Effect.Effect<string>
@@ -488,6 +509,90 @@ const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = 
       }),
       defaultBranch: Effect.fn("Vcs.defaultBranch")(function* () {
         return yield* InstanceState.use(state, (x) => x.root?.name)
+      }),
+      repositoryUrl: Effect.fn("Vcs.repositoryUrl")(function* () {
+        const ctx = yield* InstanceState.context
+        if (ctx.project.vcs !== "git") return
+        const remote = yield* git.remoteUrl(ctx.directory)
+        if (!remote) return
+        const repository = parseRepositoryReference(remote)
+        if (!repository || repository.host !== "github.com" || !repository.owner || repository.segments.length !== 2)
+          return
+        return `https://github.com/${repository.path}`
+      }),
+      branches: Effect.fn("Vcs.branches")(function* () {
+        const ctx = yield* InstanceState.context
+        if (ctx.project.vcs !== "git") return []
+        const result = yield* git.run(["for-each-ref", "--format=%(refname:short)%00%(HEAD)", "refs/heads"], {
+          cwd: ctx.directory,
+        })
+        if (result.exitCode !== 0) return []
+        return result
+          .text()
+          .split("\n")
+          .filter(Boolean)
+          .flatMap((line) => {
+            const [name, head] = line.split("\0")
+            if (!name) return []
+            return [{ name, current: head.trim() === "*" } satisfies BranchInfo]
+          })
+          .toSorted((a, b) => {
+            if (a.current !== b.current) return a.current ? -1 : 1
+            return a.name.localeCompare(b.name)
+          })
+      }),
+      switchBranch: Effect.fn("Vcs.switchBranch")(function* (input: SwitchBranchInput) {
+        const ctx = yield* InstanceState.context
+        if (ctx.project.vcs !== "git") {
+          return yield* new OperationError({
+            message: "Version control is not available for this project.",
+            reason: "non-git",
+          })
+        }
+
+        const branch = input.branch.trim()
+        if (!branch) {
+          return yield* new OperationError({
+            message: "Choose a branch to switch to.",
+            reason: "failed",
+          })
+        }
+
+        const exists = yield* git.run(["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
+          cwd: ctx.directory,
+        })
+        if (exists.exitCode !== 0) {
+          return yield* new OperationError({
+            message: `Local branch "${branch}" does not exist.`,
+            reason: "failed",
+          })
+        }
+
+        const current = yield* git.branch(ctx.directory)
+        if (current === branch) return { branch }
+
+        const dirty = yield* git.status(ctx.directory)
+        if (dirty.length > 0) {
+          return yield* new OperationError({
+            message: "Commit, stash, or discard working-tree changes before switching branches.",
+            reason: "failed",
+          })
+        }
+
+        const result = yield* git.run(["switch", branch], { cwd: ctx.directory })
+        if (result.exitCode !== 0) {
+          const message = result.stderr.toString("utf8").trim() || result.stdout.toString("utf8").trim()
+          return yield* new OperationError({
+            message: message || `Failed to switch to "${branch}".`,
+            reason: "failed",
+          })
+        }
+
+        yield* InstanceState.use(state, (value) => {
+          value.current = branch
+        })
+        yield* events.publish(Event.BranchUpdated, { branch })
+        return { branch }
       }),
       status: Effect.fn("Vcs.status")(function* () {
         const ctx = yield* InstanceState.context

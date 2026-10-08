@@ -6,7 +6,7 @@ import { Icon } from "@opencode-ai/ui/v2/icon"
 import { KeybindV2 } from "@opencode-ai/ui/v2/keybind-v2"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import type { ReferenceInfo } from "@opencode-ai/sdk/v2/client"
-import { createEffect, createMemo, on, Show } from "solid-js"
+import { createEffect, createMemo, on, Show, type Accessor } from "solid-js"
 import { ModelSelectorPopoverV2 } from "@/components/dialog-select-model"
 import { DialogSelectModelUnpaidV2 } from "@/components/dialog-select-model-unpaid-v2"
 import type { PromptInputProps } from "@/components/prompt-input/contracts"
@@ -22,8 +22,10 @@ import { useLayout } from "@/context/layout"
 import { usePermission } from "@/context/permission"
 import { type ImageAttachmentPart, usePrompt } from "@/context/prompt"
 import { usePlatform } from "@/context/platform"
+import { useServer } from "@/context/server"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
+import { useTabs } from "@/context/tabs"
 import { createSessionTabs } from "@/pages/session/helpers"
 import { showToast } from "@/utils/toast"
 import { PromptInputV2, type PromptInputV2Suggestion } from "@opencode-ai/session-ui/v2/prompt-input"
@@ -48,6 +50,9 @@ export function PromptInputV2Composer(props: PromptInputV2ComposerProps) {
   const dialog = useDialog()
   const command = useCommand()
   const language = useLanguage()
+  const server = useServer()
+  const sdk = useSDK()
+  const tabs = useTabs()
 
   return (
     <div class="flex flex-col gap-3">
@@ -65,11 +70,14 @@ export function PromptInputV2Composer(props: PromptInputV2ComposerProps) {
             title={language.t("command.model.choose")}
             keybind={command.keybindParts("model.choose")}
             model={props.controller.model.selection}
-            providerID={props.controller.model.selection.current()?.provider?.id}
-            modelName={props.controller.model.selection.current()?.name ?? language.t("dialog.model.select.title")}
+            providerID={() => props.controller.model.selection.current()?.provider?.id}
+            modelName={() => props.controller.model.selection.current()?.name ?? language.t("dialog.model.select.title")}
             onClose={props.controller.restoreFocus}
             onUnpaidClick={() =>
               dialog.show(() => <DialogSelectModelUnpaidV2 model={props.controller.model.selection} />)
+            }
+            onManage={() =>
+              tabs.openWorkspaceTab({ server: server.key, directory: sdk().directory, view: "models" })
             }
           />
         }
@@ -474,15 +482,16 @@ function PromptInputV2ModelControl(props: {
   title: string
   keybind: string[]
   model: PromptInputV2ComposerController["model"]["selection"]
-  providerID?: string
-  modelName: string
+  providerID: Accessor<string | undefined>
+  modelName: Accessor<string>
   onClose: () => void
   onUnpaidClick: () => void
+  onManage: () => void
 }) {
   const shouldAnimate = createMemo<boolean>((previous) => previous ?? props.loading)
   const content = () => (
     <>
-      <Show when={props.providerID}>
+      <Show when={props.providerID()}>
         {(providerID) => (
           <ProviderIcon
             id={providerID()}
@@ -491,7 +500,7 @@ function PromptInputV2ModelControl(props: {
           />
         )}
       </Show>
-      <span class="truncate leading-4">{props.modelName}</span>
+      <span class="truncate leading-4">{props.modelName()}</span>
       <span class="-ml-0.5 -mr-1 flex shrink-0">
         <Icon name="chevron-down" />
       </span>
@@ -543,6 +552,7 @@ function PromptInputV2ModelControl(props: {
               </ButtonV2>
             )}
             onClose={props.onClose}
+            onManage={props.onManage}
           />
         </Show>
       </TooltipV2>

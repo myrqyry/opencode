@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Frappé — Lavender",
+  "id": "catppuccin-frapp-lavender",
+  "light": {
+    "palette": {
+      "neutral": "#f2f3f8",
+      "ink": "#171a27",
+      "primary": "#666696",
+      "accent": "#3f757f",
+      "success": "#81579a",
+      "warning": "#9e552d",
+      "error": "#a8494e",
+      "info": "#4f69a8"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#292c3c",
+      "ink": "#c6d0f5",
+      "primary": "#babbf1",
+      "accent": "#99d1db",
+      "success": "#ca9ee6",
+      "warning": "#ef9f76",
+      "error": "#e78284",
+      "info": "#8caaee"
+    }
+  }
+}

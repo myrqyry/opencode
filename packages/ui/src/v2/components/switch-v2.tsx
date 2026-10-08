@@ -10,7 +10,7 @@ export interface SwitchProps extends ParentProps<ComponentProps<typeof Kobalte>>
 export function Switch(props: SwitchProps) {
   const [local, others] = splitProps(props, ["children", "class", "hideLabel"])
   return (
-    <Kobalte {...others} class={local.class} data-component="switch">
+    <Kobalte {...others} class={local.class} data-component="switch-v2">
       <Kobalte.Input data-slot="switch-input" />
       <Show when={local.children}>
         {(label) => (

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Spirited Away",
+  "id": "spirited-away",
+  "light": {
+    "palette": {
+      "neutral": "#f3f4f3",
+      "ink": "#1b1b1b",
+      "primary": "#93595c",
+      "accent": "#5a7173",
+      "success": "#6b5d7e",
+      "warning": "#7f683a",
+      "error": "#845a53",
+      "info": "#4d7378"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1a1d1c",
+      "ink": "#e6e6e6",
+      "primary": "#f3b1b3",
+      "accent": "#d4edf0",
+      "success": "#6b5d7e",
+      "warning": "#c0a878",
+      "error": "#8d635b",
+      "info": "#b0d9de"
+    }
+  }
+}

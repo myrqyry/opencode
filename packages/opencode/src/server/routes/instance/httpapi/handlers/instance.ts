@@ -59,10 +59,13 @@ export const instanceHandlers = HttpApiBuilder.group(InstanceHttpApi, "instance"
     })
 
     const getVcs = Effect.fn("InstanceHttpApi.vcs")(function* () {
-      const [branch, default_branch] = yield* Effect.all([vcs.branch(), vcs.defaultBranch()], {
-        concurrency: "unbounded",
-      })
-      return { branch, default_branch }
+      const [branch, default_branch, repository_url] = yield* Effect.all(
+        [vcs.branch(), vcs.defaultBranch(), vcs.repositoryUrl()],
+        {
+          concurrency: "unbounded",
+        },
+      )
+      return { branch, default_branch, repository_url }
     })
 
     const getVcsStatus = Effect.fn("InstanceHttpApi.vcsStatus")(function* () {
@@ -77,6 +80,16 @@ export const instanceHandlers = HttpApiBuilder.group(InstanceHttpApi, "instance"
 
     const getVcsDiffRaw = Effect.fn("InstanceHttpApi.vcsDiffRaw")(function* () {
       return yield* vcs.diffRaw()
+    })
+
+    const getVcsBranches = Effect.fn("InstanceHttpApi.vcsBranches")(function* () {
+      return yield* vcs.branches()
+    })
+
+    const switchVcsBranch = Effect.fn("InstanceHttpApi.vcsSwitchBranch")(function* (ctx: {
+      payload: Vcs.SwitchBranchInput
+    }) {
+      return yield* vcs.switchBranch(ctx.payload).pipe(Effect.mapError(mapVcsOperationError))
     })
 
     const applyVcs = Effect.fn("InstanceHttpApi.vcsApply")(function* (ctx: { payload: Vcs.ApplyInput }) {
@@ -143,6 +156,8 @@ export const instanceHandlers = HttpApiBuilder.group(InstanceHttpApi, "instance"
       .handle("vcsStatus", getVcsStatus)
       .handle("vcsDiff", getVcsDiff)
       .handle("vcsDiffRaw", getVcsDiffRaw)
+      .handle("vcsBranches", getVcsBranches)
+      .handle("vcsSwitchBranch", switchVcsBranch)
       .handle("vcsApply", applyVcs)
       .handle("vcsStage", stageVcs)
       .handle("vcsUnstage", unstageVcs)

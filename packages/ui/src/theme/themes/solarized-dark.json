@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Solarized Dark+",
+  "id": "solarized-dark",
+  "light": {
+    "palette": {
+      "neutral": "#ebf6f9",
+      "ink": "#151c1d",
+      "primary": "#1270ad",
+      "accent": "#2b7a76",
+      "success": "#1a6d9e",
+      "warning": "#85671b",
+      "error": "#c6131a",
+      "info": "#037d75"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#002b36",
+      "ink": "#839496",
+      "primary": "#268bd2",
+      "accent": "#94e0db",
+      "success": "#1a6d9e",
+      "warning": "#b58900",
+      "error": "#dc322f",
+      "info": "#2aa198"
+    }
+  }
+}

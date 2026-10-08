@@ -1,5 +1,5 @@
 import { createMediaQuery } from "@solid-primitives/media"
-import { createMemo, Show } from "solid-js"
+import { Show } from "solid-js"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
@@ -7,13 +7,12 @@ import { KeybindV2 } from "@opencode-ai/ui/v2/keybind-v2"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import { useCommand } from "@/context/command"
 import { useLanguage } from "@/context/language"
+import { useLayout } from "@/context/layout"
 import { useSettings } from "@/context/settings"
-import { useSessionLayout } from "@/pages/session/session-layout"
-import { reviewTooltipKeybind } from "../command-tooltip-keybind"
 import { StatusPopoverV2 } from "../status-popover"
 
 /**
- * New-layout right-panel header controls: the server status popover and the review-panel
+ * New-layout right-panel header controls: the server status popover and the right-sidebar
  * toggle. Split out of session-header because it is chrome rather than session content — the
  * shell renders it above the routed child, so opening a workspace view (which replaces
  * SessionPage as the center route) no longer takes these controls with it.
@@ -27,7 +26,7 @@ export function SessionHeaderV2Actions() {
   const language = useLanguage()
   const settings = useSettings()
   const command = useCommand()
-  const { view } = useSessionLayout()
+  const layout = useLayout()
   const isDesktop = createMediaQuery("(min-width: 768px)")
 
   return (
@@ -37,15 +36,15 @@ export function SessionHeaderV2Actions() {
           <StatusPopoverV2 />
         </Tooltip>
       </Show>
-      <Show when={isDesktop()}>
+      <Show when={isDesktop() && settings.visibility.fileTree()}>
         <TooltipV2
           class="shrink-0"
           placement="bottom"
           value={
             <>
-              {language.t("command.review.toggle")}
-              <Show when={reviewTooltipKeybind(command).length > 0}>
-                <KeybindV2 keys={reviewTooltipKeybind(command)} variant="neutral" />
+              {language.t("workspace.rightSidebar.toggle")}
+              <Show when={command.keybindParts("fileTree.toggle").length > 0}>
+                <KeybindV2 keys={command.keybindParts("fileTree.toggle")} variant="neutral" />
               </Show>
             </>
           }
@@ -55,10 +54,10 @@ export function SessionHeaderV2Actions() {
             variant="ghost-muted"
             size="large"
             class="!w-9 shrink-0"
-            state={view().reviewPanel.opened() ? "pressed" : undefined}
-            onClick={() => view().reviewPanel.toggle()}
-            aria-label={language.t("command.review.toggle")}
-            aria-expanded={view().reviewPanel.opened()}
+            state={layout.fileTree.opened() ? "pressed" : undefined}
+            onClick={() => layout.fileTree.toggle()}
+            aria-label={language.t("workspace.rightSidebar.toggle")}
+            aria-expanded={layout.fileTree.opened()}
             aria-controls="review-panel"
             icon={<IconV2 name="sidebar-right" />}
           />

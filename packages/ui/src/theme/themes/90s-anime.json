@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "90s Anime",
+  "id": "90s-anime",
+  "light": {
+    "palette": {
+      "neutral": "#f4f1ff",
+      "ink": "#1a1b19",
+      "primary": "#c70a44",
+      "accent": "#825f7a",
+      "success": "#c10270",
+      "warning": "#7c6c10",
+      "error": "#c70a44",
+      "info": "#6961a4"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#13062b",
+      "ink": "#e0e1dd",
+      "primary": "#ff3864",
+      "accent": "#c19ab7",
+      "success": "#ff0095",
+      "warning": "#ffe97f",
+      "error": "#ff3864",
+      "info": "#9c95dc"
+    }
+  }
+}

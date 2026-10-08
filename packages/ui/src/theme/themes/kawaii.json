@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Kawaii",
+  "id": "kawaii",
+  "light": {
+    "palette": {
+      "neutral": "#f4f2f8",
+      "ink": "#1e191b",
+      "primary": "#c1195b",
+      "accent": "#75686c",
+      "success": "#ad3e65",
+      "warning": "#806a06",
+      "error": "#bd1d6e",
+      "info": "#806a06"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#353042",
+      "ink": "#fff0f5",
+      "primary": "#ff5c8d",
+      "accent": "#fff0f5",
+      "success": "#ea7599",
+      "warning": "#ffe175",
+      "error": "#ff62a5",
+      "info": "#ffe175"
+    }
+  }
+}

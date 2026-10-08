@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Sailor Moon Background",
+  "id": "sailor-moon-background",
+  "light": {
+    "palette": {
+      "neutral": "#edf4ff",
+      "ink": "#171d11",
+      "primary": "#387878",
+      "accent": "#647154",
+      "success": "#0a798a",
+      "warning": "#886343",
+      "error": "#b2258e",
+      "info": "#397872"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#00245c",
+      "ink": "#e8f8d7",
+      "primary": "#bdffff",
+      "accent": "#e8f8d7",
+      "success": "#5db8ca",
+      "warning": "#fdd3b0",
+      "error": "#e055b8",
+      "info": "#a0e1d9"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Claude Dark",
+  "id": "claude-dark",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f3",
+      "ink": "#1b1b19",
+      "primary": "#ad4d2a",
+      "accent": "#a05436",
+      "success": "#9e4b2d",
+      "warning": "#84672a",
+      "error": "#a34c6d",
+      "info": "#a64f2d"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1b1b1a",
+      "ink": "#f4f3ee",
+      "primary": "#c15f3c",
+      "accent": "#e89576",
+      "success": "#9e4b2d",
+      "warning": "#dbbc7f",
+      "error": "#b75e7e",
+      "info": "#d67a58"
+    }
+  }
+}

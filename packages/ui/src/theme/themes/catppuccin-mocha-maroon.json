@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Mocha — Maroon",
+  "id": "catppuccin-mocha-maroon",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f8",
+      "ink": "#171a25",
+      "primary": "#985461",
+      "accent": "#99592f",
+      "success": "#a64665",
+      "warning": "#99592f",
+      "error": "#a64665",
+      "info": "#a64665"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#181825",
+      "ink": "#cdd6f4",
+      "primary": "#eba0ac",
+      "accent": "#fab387",
+      "success": "#f38ba8",
+      "warning": "#fab387",
+      "error": "#f38ba8",
+      "info": "#f38ba8"
+    }
+  }
+}

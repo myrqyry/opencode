@@ -34,6 +34,7 @@ import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { SessionRunCoordinator } from "@opencode-ai/core/session/run-coordinator"
 import { SessionRunner } from "@opencode-ai/core/session/runner"
 import * as SessionRunnerLLM from "@opencode-ai/core/session/runner/llm"
+import { MARKER as METHOD_GUIDANCE_MARKER } from "@opencode-ai/core/session/runner/method-guidance"
 import { SessionRunnerModel } from "@opencode-ai/core/session/runner/model"
 import { ToolRegistry } from "@opencode-ai/core/tool/registry"
 import { ApplicationTools } from "@opencode-ai/core/tool/application-tools"
@@ -2715,6 +2716,42 @@ describe("SessionRunnerLLM", () => {
           ],
         },
         { type: "assistant", finish: "stop", content: [{ type: "text", text: "Recovered" }] },
+      ])
+    }),
+  )
+
+  it.effect("injects Meristem method guidance only when the ambient marker is present", () =>
+    Effect.gen(function* () {
+      yield* setup
+      systemBaseline = `${METHOD_GUIDANCE_MARKER}\nInitial context`
+      const session = yield* SessionV2.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Call defect" }), resume: false })
+
+      requests.length = 0
+      responses = [
+        [
+          LLMEvent.stepStart({ index: 0 }),
+          LLMEvent.toolCall({ id: "call-defect", name: "defect", input: {} }),
+          LLMEvent.stepFinish({ index: 0, reason: "tool-calls" }),
+          LLMEvent.finish({ reason: "tool-calls" }),
+        ],
+        [
+          LLMEvent.stepStart({ index: 0 }),
+          LLMEvent.textStart({ id: "text-after-defect" }),
+          LLMEvent.textDelta({ id: "text-after-defect", text: "Recovered" }),
+          LLMEvent.textEnd({ id: "text-after-defect" }),
+          LLMEvent.stepFinish({ index: 0, reason: "stop" }),
+          LLMEvent.finish({ reason: "stop" }),
+        ],
+      ]
+
+      yield* session.resume(sessionID)
+
+      expect(requests).toHaveLength(2)
+      expect(requests[0]?.system.map((part) => part.text)).toEqual([`${METHOD_GUIDANCE_MARKER}\nInitial context`])
+      expect(requests[1]?.system.map((part) => part.text)).toEqual([
+        `${METHOD_GUIDANCE_MARKER}\nInitial context`,
+        expect.stringContaining("tool calls failed"),
       ])
     }),
   )

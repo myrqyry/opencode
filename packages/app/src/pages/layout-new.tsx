@@ -32,16 +32,15 @@ export default function NewLayout(props: ParentProps) {
         "padding-bottom": "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <MeristemSidebar />
+      <MeristemSidebar
+        debugTools={
+          import.meta.env.DEV
+            ? { visible: state.debugTools, toggle: () => setState("debugTools", (value) => !value) }
+            : undefined
+        }
+      />
       <div class="min-h-0 min-w-0 flex-1 overflow-hidden flex flex-col">
-        <Titlebar
-          update={update}
-          debugTools={
-            import.meta.env.DEV
-              ? { visible: state.debugTools, toggle: () => setState("debugTools", (value) => !value) }
-              : undefined
-          }
-        />
+        <Titlebar update={update} showChannelIndicator={false} />
         <main class="flex-1 min-h-0 min-w-0 overflow-hidden flex items-stretch contain-strict">
           <div class="min-h-0 min-w-0 flex-1 overflow-hidden flex flex-col items-start">
             <Suspense>

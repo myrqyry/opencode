@@ -20,7 +20,10 @@ import { Icon } from "@opencode-ai/ui/icon"
 import { TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Mark } from "@opencode-ai/ui/logo"
+import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
+import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { KeybindV2 } from "@opencode-ai/ui/v2/keybind-v2"
+import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import type { SnapshotFileDiff, VcsFileDiff } from "@opencode-ai/sdk/v2"
 import type { FileDiffInfo } from "@opencode-ai/client/promise"
 import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
@@ -33,7 +36,14 @@ import { SessionContextUsage } from "@/components/session-context-usage"
 const reviewTabID = "session-side-panel-review-tab"
 const reviewTabPanelID = "session-side-panel-review-tabpanel"
 const fileBrowserTabPanelID = "session-side-panel-file-browser-tabpanel"
-import { ProjectTab, ProjectTabStrip, SessionContextTab, SortableTab, SortableTabV2, FileVisual } from "@/components/session"
+import {
+  ProjectTab,
+  ProjectTabStrip,
+  SessionContextTab,
+  SortableTab,
+  SortableTabV2,
+  FileVisual,
+} from "@/components/session"
 import { OpenInAppV2 } from "@/components/session/open-in-app-v2"
 import { useCommand } from "@/context/command"
 import { useFile, type SelectedLineRange } from "@/context/file"
@@ -207,6 +217,11 @@ export function SessionSidePanel(props: {
     layout.fileTree.setTab("all")
   }
 
+  const closePanel = () => {
+    layout.fileTree.close()
+    view().reviewPanel.close()
+  }
+
   let fileFilter: HTMLInputElement | undefined
   let tabList: HTMLDivElement | undefined
   const temporaryTab = tabs().preview
@@ -244,9 +259,7 @@ export function SessionSidePanel(props: {
   // The top-level tab strip owns navigation in the V2 panel. Files and Changes
   // are pinned project resources; real file tabs are workspace-scoped siblings.
   const fileBrowserMounted = createMemo(
-    () =>
-      !!props.fileBrowserState &&
-      (settings.general.newLayoutDesigns() ? activeTab() === "files" : openFileOpen()),
+    () => !!props.fileBrowserState && (settings.general.newLayoutDesigns() ? activeTab() === "files" : openFileOpen()),
   )
   const fileBrowserVisible = createMemo(() =>
     settings.general.newLayoutDesigns() ? activeTab() === "files" : activeTab() === SESSION_OPEN_FILE_TAB,
@@ -580,19 +593,26 @@ export function SessionSidePanel(props: {
                           }}
                           end={
                             <div
-                              class="session-review-v2-open-in-app-slot flex items-center"
+                              class="session-review-v2-open-in-app-slot flex items-center gap-0.5"
                               onPointerDown={(event) => event.stopPropagation()}
                               onClick={(event) => event.stopPropagation()}
                             >
                               <OpenInAppV2 directory={projectDirectory} />
+                              <Show when={settings.general.newLayoutDesigns()}>
+                                <TooltipV2 value="Close sidebar" placement="bottom" gutter={10}>
+                                  <IconButtonV2
+                                    size="small"
+                                    variant="ghost-muted"
+                                    icon={<IconV2 name="xmark-small" />}
+                                    aria-label="Close sidebar"
+                                    onClick={closePanel}
+                                  />
+                                </TooltipV2>
+                              </Show>
                             </div>
                           }
                         >
-                          <ProjectTab
-                            role="tab"
-                            active={activeTab() === "files"}
-                            onSelect={() => activateTab("files")}
-                          >
+                          <ProjectTab role="tab" active={activeTab() === "files"} onSelect={() => activateTab("files")}>
                             <span class="min-w-0 truncate">{language.t("palette.group.files")}</span>
                           </ProjectTab>
 
@@ -602,7 +622,7 @@ export function SessionSidePanel(props: {
                             ariaControls={activeTab() === "changes" ? reviewTabPanelID : undefined}
                             onSelect={() => activateTab("changes")}
                           >
-                            <span class="min-w-0 truncate">{language.t("session.review.change.other")}</span>
+                            <span class="min-w-0 truncate">{language.t("workspace.scm.title")}</span>
                             <Show when={props.reviewCount() > 0}>
                               <span class="shrink-0 text-v2-text-text-faint">{props.reviewCount()}</span>
                             </Show>
@@ -843,11 +863,7 @@ export function SessionSidePanel(props: {
                       edge="start"
                       size={fileTreeWidth()}
                       min={FILE_TREE_WIDTH_MIN}
-                      max={
-                        typeof window === "undefined"
-                          ? 720
-                          : Math.max(360, Math.min(720, window.innerWidth * 0.45))
-                      }
+                      max={typeof window === "undefined" ? 720 : Math.max(360, Math.min(720, window.innerWidth * 0.45))}
                       onResize={(width) => {
                         props.size.touch()
                         layout.fileTree.resize(width)

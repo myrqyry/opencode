@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Catppuccin Mocha — Peach",
+  "id": "catppuccin-mocha-peach",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f8",
+      "ink": "#171a25",
+      "primary": "#99592f",
+      "accent": "#796764",
+      "success": "#985461",
+      "warning": "#99592f",
+      "error": "#a64665",
+      "info": "#7e693a"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#181825",
+      "ink": "#cdd6f4",
+      "primary": "#fab387",
+      "accent": "#f5e0dc",
+      "success": "#eba0ac",
+      "warning": "#fab387",
+      "error": "#f38ba8",
+      "info": "#f9e2af"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "Claude Code",
+  "id": "claude-code",
+  "light": {
+    "palette": {
+      "neutral": "#f3f3f3",
+      "ink": "#1b1b18",
+      "primary": "#a84c2d",
+      "accent": "#826552",
+      "success": "#9e4b2d",
+      "warning": "#8e6218",
+      "error": "#c20119",
+      "info": "#826738"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#1a1a1a",
+      "ink": "#c3c1ba",
+      "primary": "#d87757",
+      "accent": "#ffdec8",
+      "success": "#9e4b2d",
+      "warning": "#e1a035",
+      "error": "#e33737",
+      "info": "#f3d5a3"
+    }
+  }
+}
