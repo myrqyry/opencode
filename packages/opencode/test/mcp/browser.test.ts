@@ -55,8 +55,10 @@ test("forwards Meristem browser XDG homes through the shared opener", async () =
       }).pipe(Effect.provide(LayerNode.compile(McpBrowser.node))),
     )
 
-    expect(openedEnv?.XDG_CONFIG_HOME).toBe("/tmp/opencode-browser-config")
-    expect(openedEnv?.XDG_DATA_HOME).toBe("/tmp/opencode-browser-data")
+    expect(openedEnv).toMatchObject({
+      XDG_CONFIG_HOME: "/tmp/opencode-browser-config",
+      XDG_DATA_HOME: "/tmp/opencode-browser-data",
+    })
   } finally {
     if (previousConfig === undefined) delete process.env.OPENCODE_BROWSER_XDG_CONFIG_HOME
     else process.env.OPENCODE_BROWSER_XDG_CONFIG_HOME = previousConfig
