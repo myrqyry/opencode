@@ -18,6 +18,7 @@ export type ScrollViewThumbVisibility = "hover" | "scroll"
 
 export interface ScrollViewProps extends ComponentProps<"div"> {
   viewportRef?: (el: HTMLDivElement) => void
+  nativeScrollbar?: boolean
   orientation?: "vertical" | "horizontal" // currently only vertical is fully implemented for thumb
   /**
    * `hover`: show while hovered or scrolling. `scroll`: show only while scrolling.
@@ -105,6 +106,7 @@ export function ScrollView(props: ScrollViewProps) {
       "class",
       "children",
       "viewportRef",
+      "nativeScrollbar",
       "orientation",
       "thumbVisibility",
       "thumbContainer",
@@ -348,6 +350,7 @@ export function ScrollView(props: ScrollViewProps) {
       <div
         ref={viewportRef}
         class="scroll-view__viewport"
+        data-native-scrollbar={local.nativeScrollbar ? "" : undefined}
         data-scrollable
         onScroll={(e) => {
           updateThumb()
@@ -378,7 +381,7 @@ export function ScrollView(props: ScrollViewProps) {
       </div>
 
       {/* Thumb Overlay — optionally portaled into an external track */}
-      <Show when={showThumb()}>
+      <Show when={!local.nativeScrollbar && showThumb()}>
         <Show when={thumbMount()} fallback={renderThumb()}>
           {(mount) => <Portal mount={mount()}>{renderThumb()}</Portal>}
         </Show>

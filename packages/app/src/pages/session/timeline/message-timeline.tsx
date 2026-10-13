@@ -1365,6 +1365,7 @@ export function MessageTimeline(props: {
         </Show>
       </div>
       <ScrollView
+        nativeScrollbar={settings.general.newLayoutDesigns()}
         viewportRef={bindListRoot}
         onWheel={handleListWheel}
         onTouchStart={handleListTouchStart}

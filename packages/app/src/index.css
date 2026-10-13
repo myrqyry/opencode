@@ -504,24 +504,24 @@ body[data-new-layout] {
 }
 
 body[data-new-layout],
-body[data-new-layout] :where(*:not(.no-scrollbar)) {
+body[data-new-layout] :where(*:not(.no-scrollbar):not(.scroll-view__viewport)) {
   scrollbar-width: thin;
   scrollbar-color: var(--meristem-scrollbar-thumb) var(--meristem-scrollbar-track);
 }
 
 body[data-new-layout]::-webkit-scrollbar,
-body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar {
+body[data-new-layout] :where(*:not(.no-scrollbar):not(.scroll-view__viewport))::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 body[data-new-layout]::-webkit-scrollbar-track,
-body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-track {
+body[data-new-layout] :where(*:not(.no-scrollbar):not(.scroll-view__viewport))::-webkit-scrollbar-track {
   background: var(--meristem-scrollbar-track);
 }
 
 body[data-new-layout]::-webkit-scrollbar-thumb,
-body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-thumb {
+body[data-new-layout] :where(*:not(.no-scrollbar):not(.scroll-view__viewport))::-webkit-scrollbar-thumb {
   min-width: 24px;
   min-height: 24px;
   border: 2px solid transparent;
@@ -531,13 +531,48 @@ body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-thumb {
 }
 
 body[data-new-layout]::-webkit-scrollbar-thumb:hover,
-body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-thumb:hover {
+body[data-new-layout] :where(*:not(.no-scrollbar):not(.scroll-view__viewport))::-webkit-scrollbar-thumb:hover {
   background: var(--meristem-scrollbar-thumb-hover);
   background-clip: padding-box;
 }
 
 body[data-new-layout]::-webkit-scrollbar-corner,
-body[data-new-layout] :where(*:not(.no-scrollbar))::-webkit-scrollbar-corner {
+body[data-new-layout] :where(*:not(.no-scrollbar):not(.scroll-view__viewport))::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ScrollView owns its thumb by default. Panel-level views opt into the same native themed
+   scrollbar as the sidebar and Changes panel so the three workspace columns feel consistent. */
+body[data-new-layout] [data-native-scrollbar] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--meristem-scrollbar-thumb) var(--meristem-scrollbar-track);
+}
+
+body[data-new-layout] [data-native-scrollbar]::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+
+body[data-new-layout] [data-native-scrollbar]::-webkit-scrollbar-track {
+  background: var(--meristem-scrollbar-track);
+}
+
+body[data-new-layout] [data-native-scrollbar]::-webkit-scrollbar-thumb {
+  min-width: 24px;
+  min-height: 24px;
+  border: 2px solid transparent;
+  border-radius: var(--v2-shape-pill);
+  background: var(--meristem-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+body[data-new-layout] [data-native-scrollbar]::-webkit-scrollbar-thumb:hover {
+  background: var(--meristem-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+body[data-new-layout] [data-native-scrollbar]::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -620,39 +655,34 @@ body[data-new-layout] {
 
 @keyframes meristem-project-settle {
   0% {
-    transform: scale(0.94);
+    opacity: 0.78;
     filter: saturate(0.82);
   }
   58% {
-    transform: scale(1.025);
+    opacity: 1;
     filter: saturate(1.08);
   }
   100% {
-    transform: scale(1);
+    opacity: 1;
     filter: saturate(1);
   }
 }
 
 @keyframes meristem-avatar-settle {
   0% {
-    transform: scale(0.78) rotate(-6deg);
-  }
-  62% {
-    transform: scale(1.08) rotate(1.5deg);
+    opacity: 0.7;
   }
   100% {
-    transform: scale(1) rotate(0deg);
+    opacity: 1;
   }
 }
 
 @keyframes meristem-chat-settle {
   0% {
-    transform: scale(0.965);
     border-radius: var(--v2-shape-sheet);
     opacity: 0.78;
   }
   65% {
-    transform: scale(1.018);
     border-radius: var(--v2-shape-panel);
     opacity: 1;
   }
@@ -679,20 +709,11 @@ body[data-new-layout] {
 }
 
 @keyframes meristem-view-enter {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(7px) scale(0.994);
-    filter: blur(0.7px);
   }
-  72% {
+  to {
     opacity: 1;
-    transform: translateY(-1px) scale(1.001);
-    filter: blur(0);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
   }
 }
 
@@ -935,49 +956,38 @@ body[data-new-layout] [data-action="prompt-submit"]:not(:disabled):hover {
   }
 }
 
-/* Cross-fade/settle the conversation surface itself when switching chat tabs. */
+/* Cross-fade the conversation surface without moving or scaling its layout. */
 body[data-new-layout] [data-component="session-middle-panel"] {
   view-transition-name: meristem-middle-panel;
 }
 
 ::view-transition-group(meristem-middle-panel) {
-  animation-duration: 280ms;
-  animation-timing-function: var(--meristem-ease-emphasized, cubic-bezier(0.05, 0.7, 0.1, 1));
+  animation-duration: 180ms;
+  animation-timing-function: var(--meristem-ease-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
 ::view-transition-old(meristem-middle-panel) {
-  animation: meristem-middle-panel-out 170ms var(--meristem-ease-standard, cubic-bezier(0.2, 0, 0, 1)) both;
+  animation: meristem-middle-panel-out 120ms var(--meristem-ease-standard, cubic-bezier(0.2, 0, 0, 1)) both;
   mix-blend-mode: normal;
 }
 
 ::view-transition-new(meristem-middle-panel) {
-  animation: meristem-middle-panel-in 280ms var(--meristem-ease-emphasized, cubic-bezier(0.05, 0.7, 0.1, 1)) both;
+  animation: meristem-middle-panel-in 180ms var(--meristem-ease-standard, cubic-bezier(0.2, 0, 0, 1)) both;
   mix-blend-mode: normal;
 }
 
 @keyframes meristem-middle-panel-out {
   to {
     opacity: 0;
-    transform: translateX(-8px) scale(0.992);
-    filter: blur(0.6px);
   }
 }
 
 @keyframes meristem-middle-panel-in {
   from {
     opacity: 0;
-    transform: translateX(10px) scale(0.988);
-    filter: blur(0.8px);
-  }
-  72% {
-    opacity: 1;
-    transform: translateX(-1px) scale(1.002);
-    filter: blur(0);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
-    filter: blur(0);
   }
 }
 

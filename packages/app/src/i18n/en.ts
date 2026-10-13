@@ -27,6 +27,8 @@ export const dict = {
 
   "command.sidebar.toggle": "Toggle sidebar",
   "command.project.open": "Open project",
+  "sidebar.drop.folderOnly": "Drop a folder to open a project.",
+  "sidebar.drop.emptyFolder": "Empty folders must be opened using Open project.",
   "command.project.previous": "Previous project",
   "command.project.next": "Next project",
   "command.project.index": "Switch to project {{index}}",

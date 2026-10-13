@@ -127,6 +127,8 @@ export const dict = {
   "command.sidebar.toggle": "切换侧边栏",
 
   "command.project.open": "打开项目",
+  "sidebar.drop.folderOnly": "拖放文件夹以打开项目。",
+  "sidebar.drop.emptyFolder": "请使用“打开项目”来打开空文件夹。",
   "command.project.previous": "上一个项目",
   "command.project.next": "下一个项目",
   "command.project.index": "切换到项目 {{index}}",

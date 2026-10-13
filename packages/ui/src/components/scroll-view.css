@@ -19,6 +19,17 @@
   display: none;
 }
 
+/* Native mode must remain visible without app-specific layout styles. */
+.scroll-view__viewport[data-native-scrollbar] {
+  scrollbar-width: thin;
+}
+
+.scroll-view__viewport[data-native-scrollbar]::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+
 .scroll-view__thumb {
   position: absolute;
   inset-inline-end: 0;

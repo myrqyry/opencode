@@ -128,6 +128,7 @@ export function SessionReviewV2Sidebar(props: SessionReviewV2SidebarProps) {
           <ScrollView
             data-slot="session-review-v2-sidebar-tree"
             class="group/file-tree-v2"
+            nativeScrollbar
             thumbVisibility="scroll"
             viewportRef={props.viewportRef}
           >

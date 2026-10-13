@@ -130,6 +130,12 @@ const platform: Platform = {
   setDefaultServer: writeDefaultServerUrl,
 }
 
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  void navigator.serviceWorker.register("/sw.js").catch((error) => {
+    console.warn("OpenCode service worker registration failed", error)
+  })
+}
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,

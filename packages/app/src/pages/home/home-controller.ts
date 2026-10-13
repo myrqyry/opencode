@@ -4,6 +4,7 @@ import { ServerConnection, useServer } from "@/context/server"
 import { useServerSync } from "@/context/server-sync"
 import { useTabs } from "@/context/tabs"
 import { toggleHomeProjectSelection } from "@/pages/layout/helpers"
+import { inspectDroppedProjects } from "@/pages/layout/sidebar-folder-drop"
 import { createEffect, createMemo } from "solid-js"
 
 export function createHomeController() {
@@ -106,6 +107,27 @@ export function createHomeController() {
         })
         ctx.projects.touch(directory)
         setSelection({ server: ServerConnection.key(conn), directory })
+      },
+      addExisting: async (conn: ServerConnection.Any, directories: string[]) => {
+        const directory = directories[0]
+        if (!directory) return false
+        const ctx = global.ensureServerCtx(conn)
+        const checked = await inspectDroppedProjects(directories, {
+          isOpen: (item) => ctx.projects.list().some((project) => project.worktree === item),
+          fileCount: async (item) =>
+            (await ctx.sdk.api.file.list({ path: ".", location: { directory: item } })).data.length,
+          project: (item) => ctx.sdk.api.project.current({ location: { directory: item } }),
+        })
+        // Reject the whole drop if any empty folder would need implicit Git initialization.
+        if (checked.some((item) => "empty" in item)) return false
+        for (const item of checked) {
+          if (!("project" in item) || !item.project) continue
+          ctx.projects.open(item.directory)
+          ctx.sync.child(item.directory, { bootstrap: false })[1]("project", item.project.id)
+        }
+        ctx.projects.touch(directory)
+        setSelection({ server: ServerConnection.key(conn), directory })
+        return true
       },
       openNewSession: () => {
         const conn = focusedServer()

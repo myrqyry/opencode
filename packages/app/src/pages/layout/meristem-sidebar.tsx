@@ -15,12 +15,15 @@ import { useProjectColor } from "@/utils/project-color"
 import { pathKey } from "@/utils/path-key"
 import { useLanguage } from "@/context/language"
 import { useNotification } from "@/context/notification"
+import { usePlatform } from "@/context/platform"
 import { useSettings } from "@/context/settings"
-import { useServer } from "@/context/server"
+import { ServerConnection, useServer } from "@/context/server"
 import { useServerSync } from "@/context/server-sync"
 import { useServerSDK } from "@/context/server-sdk"
 import { tabKey, type Tab, type WorkspaceView, useTabs } from "@/context/tabs"
 import { displayName, getProjectAvatarSource, sortedRootSessions } from "@/pages/layout/helpers"
+import { droppedFolderPaths, folderDragItems } from "@/pages/layout/sidebar-folder-drop"
+import { showToast } from "@/utils/toast"
 import { createHomeController } from "@/pages/home/home-controller"
 import { createHomeProjectsController } from "@/pages/home/home-projects-controller"
 import { Persist, persisted } from "@/utils/persist"
@@ -312,12 +315,20 @@ function CollapsedRail(props: {
   onNewSession: () => void
   onSettings: () => void
   onProject: (project: LocalProject) => void
+  dropActive: Accessor<boolean>
+  onDragOver: (event: DragEvent) => void
+  onDragLeave: (event: DragEvent) => void
+  onDrop: (event: DragEvent) => void
   debugTools?: { visible: boolean; toggle: () => void }
 }) {
   return (
     <aside
       data-component="meristem-sidebar-rail"
       class="flex h-full w-12 shrink-0 flex-col items-center border-r border-v2-border-border-muted bg-v2-background-bg-deep"
+      classList={{ "outline-solid outline-2 outline-v2-border-border-focus outline-offset-[-2px]": props.dropActive() }}
+      onDragOver={props.onDragOver}
+      onDragLeave={props.onDragLeave}
+      onDrop={props.onDrop}
     >
       <div class="flex h-9 w-full shrink-0 items-center justify-center border-b border-v2-border-border-muted">
         <TooltipV2 placement="right" value="Open sidebar">
@@ -385,6 +396,7 @@ export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle
   const serverSync = useServerSync()
   const serverSDK = useServerSDK()
   const language = useLanguage()
+  const platform = usePlatform()
   const settings = useSettings()
   const params = useParams<{ id?: string }>()
   const mobile = createMediaQuery("(max-width: 1279px)")
@@ -397,6 +409,7 @@ export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle
       sections: { workspace: true, projects: true },
     }),
   )
+  const [folderDropActive, setFolderDropActive] = createSignal(false)
   const projects = createMemo(() => layout.projects.list())
   const projectByDirectory = createMemo(
     () =>
@@ -564,6 +577,77 @@ export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle
     openProject(project)
   }
 
+  const canOpenDroppedProject = () =>
+    platform.platform === "desktop" && !!platform.getPathForFile && ServerConnection.local(server.current)
+
+  const handleSidebarDragOver = (event: DragEvent) => {
+    const transfer = event.dataTransfer
+    if (!transfer || !Array.from(transfer.types).includes("Files")) return
+    event.preventDefault()
+    if (!canOpenDroppedProject() || folderDragItems(transfer.items).length === 0) {
+      transfer.dropEffect = "none"
+      setFolderDropActive(false)
+      return
+    }
+    transfer.dropEffect = "copy"
+    setFolderDropActive(true)
+  }
+
+  const handleSidebarDragLeave = (event: DragEvent) => {
+    if (
+      event.relatedTarget instanceof Node &&
+      event.currentTarget instanceof HTMLElement &&
+      event.currentTarget.contains(event.relatedTarget)
+    )
+      return
+    setFolderDropActive(false)
+  }
+
+  const handleSidebarDrop = (event: DragEvent) => {
+    const transfer = event.dataTransfer
+    if (!transfer || !Array.from(transfer.types).includes("Files")) return
+    event.preventDefault()
+    event.stopPropagation()
+    setFolderDropActive(false)
+
+    const connection = server.current
+    if (platform.platform !== "desktop" || !connection) return
+    const getPathForFile = platform.getPathForFile
+    if (!getPathForFile || !ServerConnection.local(connection)) return
+
+    const directories = droppedFolderPaths(transfer.items, getPathForFile)
+    const directory = directories[0]
+    if (!directory) {
+      showToast({
+        variant: "error",
+        title: language.t("command.project.open"),
+        description: language.t("sidebar.drop.folderOnly"),
+      })
+      return
+    }
+
+    void home.project
+      .addExisting(connection, directories)
+      .then((opened) => {
+        if (!opened) {
+          showToast({
+            variant: "error",
+            title: language.t("command.project.open"),
+            description: language.t("sidebar.drop.emptyFolder"),
+          })
+          return
+        }
+        openProject({ worktree: directory, expanded: false })
+      })
+      .catch(() =>
+        showToast({
+          variant: "error",
+          title: language.t("common.requestFailed"),
+          description: language.t("dialog.directory.readError"),
+        }),
+      )
+  }
+
   const toggleSection = (section: keyof typeof ui.sections) => {
     setUi("sections", section, (value) => !value)
   }
@@ -622,6 +706,10 @@ export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle
               onNewSession={newSession}
               onSettings={() => openWorkspaceView("settings")}
               onProject={openProjectFromRail}
+              dropActive={folderDropActive}
+              onDragOver={handleSidebarDragOver}
+              onDragLeave={handleSidebarDragLeave}
+              onDrop={handleSidebarDrop}
               debugTools={props.debugTools}
             />
           </Show>
@@ -633,7 +721,11 @@ export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle
           classList={{
             "relative h-full": !mobile(),
             "fixed inset-y-0 start-0 z-50 shadow-xl": mobile(),
+            "outline-solid outline-2 outline-v2-border-border-focus outline-offset-[-2px]": folderDropActive(),
           }}
+          onDragOver={handleSidebarDragOver}
+          onDragLeave={handleSidebarDragLeave}
+          onDrop={handleSidebarDrop}
           style={{
             width: mobile() ? "min(360px, calc(100vw - 24px))" : `${Math.min(sidebarWidth(), sidebarMax())}px`,
           }}

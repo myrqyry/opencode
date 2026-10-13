@@ -784,7 +784,12 @@ function SessionFileViewV2(props: { tab: string }) {
 
   const content = () => (
     <div class="mt-3 relative h-full min-h-0">
-      <ScrollView class="h-full" viewportRef={scrollSync.setViewport} onScroll={scrollSync.handleScroll as any}>
+      <ScrollView
+        nativeScrollbar
+        class="h-full"
+        viewportRef={scrollSync.setViewport}
+        onScroll={scrollSync.handleScroll as any}
+      >
         <Switch>
           <Match when={state()?.loaded}>{renderFile(contents())}</Match>
           <Match when={state()?.loading}>
