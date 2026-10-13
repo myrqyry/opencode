@@ -227,6 +227,9 @@ export const loadProvidersQuery = (
 ) =>
   queryOptions({
     queryKey: [scope, directory, "providers"],
+    // Poll only active queries for servers connected to local Ollama.
+    // TanStack Query pauses this interval for inactive/hidden UI surfaces.
+    refetchInterval: (query) => (query.state.data?.connected.includes("ollama") ? 60_000 : false),
     queryFn: () =>
       retry(async () => {
         if ((await protocol) === "v1" && legacy) {

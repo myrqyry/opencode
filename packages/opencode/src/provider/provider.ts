@@ -1263,6 +1263,14 @@ interface State {
   sdk: Map<string, BundledSDK>
   modelLoaders: Record<string, CustomModelLoader>
   varsLoaders: Record<string, CustomVarsLoader>
+  ollama: {
+    discovered: Set<string>
+    configured: Set<string>
+    blacklist: Set<string>
+    whitelist?: Set<string>
+    nextRefresh: number
+    pending?: Promise<void>
+  }
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Provider") {}
@@ -1764,6 +1772,8 @@ const layer = Layer.effect(
           }
 
           if (Object.keys(provider.models).length === 0) {
+            // Keep an explicitly configured local provider eligible for discovery.
+            if (id === "ollama" && typeof provider.options.baseURL === "string") continue
             delete providers[providerID]
             continue
           }
@@ -1776,11 +1786,112 @@ const layer = Layer.effect(
           sdk,
           modelLoaders,
           varsLoaders,
+          ollama: {
+            discovered: new Set<string>(),
+            configured: new Set(Object.keys(cfg.provider?.ollama?.models ?? {})),
+            blacklist: new Set(cfg.provider?.ollama?.blacklist ?? []),
+            whitelist: cfg.provider?.ollama?.whitelist ? new Set(cfg.provider.ollama.whitelist) : undefined,
+            nextRefresh: 0,
+          },
         }
       }),
     )
 
-    const list = Effect.fn("Provider.list")(() => InstanceState.use(state, (s) => s.providers))
+    // Refresh only the models contributed by Ollama. Explicit config entries and
+    // the user's other providers remain untouched.
+    async function refreshOllama(s: State) {
+      const provider = s.providers[ProviderV2.ID.make("ollama")]
+      const baseURL = provider?.options.baseURL
+      if (typeof baseURL !== "string" || !baseURL) return
+      if (s.ollama.pending) return s.ollama.pending
+      if (Date.now() < s.ollama.nextRefresh) return
+      s.ollama.nextRefresh = Date.now() + 15_000
+
+      const pending = (async () => {
+        try {
+          const endpoint = new URL(baseURL)
+          if (endpoint.protocol !== "http:" && endpoint.protocol !== "https:") return
+          endpoint.pathname = endpoint.pathname.replace(/\/v1\/?$/, "").replace(/\/$/, "") + "/api/tags"
+          endpoint.search = ""
+          endpoint.hash = ""
+
+          const response = await fetch(endpoint, { signal: AbortSignal.timeout(2500) })
+          if (!response.ok) return
+          const data: unknown = await response.json()
+          if (!isRecord(data) || !Array.isArray(data.models)) return
+
+          const next = new Map<string, Model>()
+          for (const entry of data.models) {
+            if (!isRecord(entry)) continue
+            const id = typeof entry.name === "string" ? entry.name : entry.model
+            if (typeof id !== "string" || !id) continue
+            // Ollama's default :latest tag is equivalent to the bare name.
+            if (s.ollama.configured.has(id)) continue
+            if (id.endsWith(":latest") && s.ollama.configured.has(id.slice(0, -7))) continue
+            if (s.ollama.blacklist.has(id)) continue
+            if (s.ollama.whitelist && !s.ollama.whitelist.has(id)) continue
+
+            const capabilities = Array.isArray(entry.capabilities)
+              ? entry.capabilities.filter((value): value is string => typeof value === "string")
+              : []
+            // Exclude embedding-only models from the chat picker.
+            if (capabilities.length && !capabilities.includes("completion")) continue
+
+            const details = isRecord(entry.details) ? entry.details : {}
+            const declaredContext = details.context_length
+            const context =
+              typeof declaredContext === "number" && Number.isFinite(declaredContext) && declaredContext > 0
+                ? declaredContext
+                : 8192
+            const image = capabilities.includes("vision")
+            const model: Model = {
+              id: ModelV2.ID.make(id),
+              providerID: ProviderV2.ID.make("ollama"),
+              name: id,
+              family: typeof details.family === "string" ? details.family : "",
+              api: { id, npm: "@ai-sdk/openai-compatible", url: baseURL },
+              status: "active",
+              headers: {},
+              options: {},
+              cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+              limit: { context, output: Math.min(4096, context) },
+              capabilities: {
+                temperature: true,
+                reasoning: capabilities.includes("thinking"),
+                attachment: image,
+                toolcall: capabilities.includes("tools"),
+                input: { text: true, audio: false, image, video: false, pdf: false },
+                output: { text: true, audio: false, image: false, video: false, pdf: false },
+                interleaved: false,
+              },
+              release_date: typeof entry.modified_at === "string" ? entry.modified_at.slice(0, 10) : "",
+              variants: {},
+            }
+            next.set(id, model)
+          }
+
+          for (const id of s.ollama.discovered) {
+            if (!s.ollama.configured.has(id)) delete provider.models[id]
+          }
+          for (const [id, model] of next) provider.models[id] = model
+          s.ollama.discovered = new Set(next.keys())
+        } catch {
+          // Preserve the previous snapshot while Ollama is unreachable or pulling.
+        }
+      })()
+      s.ollama.pending = pending
+      try {
+        await pending
+      } finally {
+        if (s.ollama.pending === pending) s.ollama.pending = undefined
+      }
+    }
+
+    const list = Effect.fn("Provider.list")(function* () {
+      const s = yield* InstanceState.get(state)
+      yield* Effect.promise(() => refreshOllama(s))
+      return Object.fromEntries(Object.entries(s.providers).filter(([, provider]) => Object.keys(provider.models).length > 0))
+    })
 
     async function resolveSDK(model: Model, s: State, envs: Record<string, string | undefined>) {
       try {
@@ -1887,12 +1998,14 @@ const layer = Layer.effect(
       }
     }
 
-    const getProvider = Effect.fn("Provider.getProvider")((providerID: ProviderV2.ID) =>
-      InstanceState.use(state, (s) => s.providers[providerID]),
-    )
+    const getProvider = Effect.fn("Provider.getProvider")(function* (providerID: ProviderV2.ID) {
+      const providers = yield* list()
+      return providers[providerID]
+    })
 
     const getModel = Effect.fn("Provider.getModel")(function* (providerID: ProviderV2.ID, modelID: ModelV2.ID) {
       const s = yield* InstanceState.get(state)
+      if (providerID === ProviderV2.ID.make("ollama")) yield* Effect.promise(() => refreshOllama(s))
       const provider = s.providers[providerID]
       if (!provider) {
         const catalogProvider = s.catalog[providerID]
