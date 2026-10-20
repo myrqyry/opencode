@@ -940,6 +940,47 @@ describe("session.compaction.process", () => {
   )
 
   itCompaction.instance(
+    "stops automatic compaction when reasoning consumes the budget without producing a summary",
+    () => {
+      const stub = llm()
+      stub.push(
+        Stream.make(
+          LLMEvent.reasoningStart({ id: "reason-0" }),
+          LLMEvent.reasoningDelta({ id: "reason-0", text: "unfinished internal reasoning" }),
+          LLMEvent.reasoningEnd({ id: "reason-0" }),
+          LLMEvent.stepFinish({ index: 0, reason: "length", usage: basicUsage() }),
+          LLMEvent.finish({ reason: "length", usage: basicUsage() }),
+        ),
+      )
+      return Effect.gen(function* () {
+        const ssn = yield* SessionNs.Service
+        const session = yield* ssn.create({})
+        const user = yield* createUserMessage(session.id, "Context needs compacting")
+        const msgs = yield* ssn.messages({ sessionID: session.id })
+        const result = yield* SessionCompaction.use.process({
+          parentID: user.id,
+          messages: msgs,
+          sessionID: session.id,
+          auto: true,
+          overflow: true,
+        })
+        const all = yield* ssn.messages({ sessionID: session.id })
+        const summary = all.find((msg) => msg.info.role === "assistant" && msg.info.summary)
+        expect(result).toBe("stop")
+        expect(summary?.info.role).toBe("assistant")
+        if (summary?.info.role === "assistant") {
+          expect(summary.info.finish).toBe("error")
+          expect(JSON.stringify(summary.info.error)).toContain("Compaction")
+        }
+        expect(all.some((msg) =>
+          msg.parts.some((part) => part.type === "text" && part.metadata?.compaction_continue === true)
+        )).toBe(false)
+      }).pipe(withCompaction({ llm: stub.llmLayer }))
+    },
+    { git: true },
+  )
+
+  itCompaction.instance(
     "marks summary message as errored on compact result",
     Effect.gen(function* () {
       const ssn = yield* SessionNs.Service

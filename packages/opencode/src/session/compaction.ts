@@ -477,6 +477,25 @@ const layer = Layer.effect(
         return "stop"
       }
 
+      // A model can exhaust its output budget on reasoning alone, leaving no
+      // usable summary. Do not mark that as a successful compaction or create
+      // another synthetic continuation: the same context will just overflow.
+      if (result === "continue" && processor.message.finish && !processor.message.error) {
+        const completed = (yield* session.messages({ sessionID: input.sessionID, limit: 1 }).pipe(
+          Effect.orDie,
+        )).find((item) => item.info.id === processor.message.id)
+        if (processor.message.finish === "length" || !completed || !summaryText(completed)) {
+          processor.message.error = new SessionV1.ContextOverflowError({
+            message: processor.message.finish === "length"
+              ? "Compaction hit the model output limit before completing a usable summary"
+              : "Compaction returned no usable summary",
+          }).toObject()
+          processor.message.finish = "error"
+          yield* session.updateMessage(processor.message)
+          return "stop"
+        }
+      }
+
       if (compactionPart && selected.tail_start_id && compactionPart.tail_start_id !== selected.tail_start_id) {
         yield* session.updatePart({
           ...compactionPart,
