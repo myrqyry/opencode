@@ -10,7 +10,7 @@ export type DialogGoUpsellProps = {
   description: JSX.Element
   link?: string
   actionLabel: string
-  onClose?: (dontShowAgain?: boolean) => void
+  onClose: (dontShowAgain?: boolean) => void
 }
 
 export function DialogUsageExceeded(props: DialogGoUpsellProps) {
@@ -20,12 +20,12 @@ export function DialogUsageExceeded(props: DialogGoUpsellProps) {
 
   const runAction = () => {
     if (props.link) platform.openExternal(props.link)
-    props.onClose?.()
+    props.onClose()
     dialog.close()
   }
 
   const dismiss = () => {
-    props.onClose?.(true)
+    props.onClose(true)
     dialog.close()
   }
 
