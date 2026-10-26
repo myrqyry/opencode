@@ -7,10 +7,10 @@
       "neutral": "#f0f4f6",
       "ink": "#1b1b1b",
       "primary": "#517a19",
-      "accent": "#6c6c6c",
-      "success": "#4c7b0e",
-      "warning": "#806a18",
-      "error": "#ad4734",
+      "accent": "#6d6d6d",
+      "success": "#158224",
+      "warning": "#816b1a",
+      "error": "#ae4935",
       "info": "#4f7b01"
     }
   },
@@ -20,10 +20,14 @@
       "ink": "#d4d4d4",
       "primary": "#afff45",
       "accent": "#d4d4d4",
-      "success": "#6ba22e",
       "warning": "#cca700",
       "error": "#f48771",
-      "info": "#85c036"
+      "info": "#85c036",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#222d32",
+      "text-base": "#d4d4d4"
     }
   }
 }

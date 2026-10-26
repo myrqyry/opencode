@@ -1,17 +1,17 @@
 {
   "$schema": "https://opencode.ai/desktop-theme.json",
-  "name": "Fire Spring Darker",
+  "name": "EarthBound — Fire Spring Darker",
   "id": "fire-spring-darker",
   "light": {
     "palette": {
       "neutral": "#f3f3f3",
       "ink": "#1c1c08",
-      "primary": "#8c48af",
-      "accent": "#735f9a",
-      "success": "#8938cb",
+      "primary": "#904bb2",
+      "accent": "#76629d",
+      "success": "#158224",
       "warning": "#746f1a",
-      "error": "#be2d36",
-      "info": "#6f609f"
+      "error": "#c02f38",
+      "info": "#7161a1"
     }
   },
   "dark": {
@@ -20,10 +20,14 @@
       "ink": "#ffffca",
       "primary": "#d992ff",
       "accent": "#c4b0f0",
-      "success": "#9b4de0",
       "warning": "#f0e500",
       "error": "#ff6b6b",
-      "info": "#a99ade"
+      "info": "#a99ade",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#080808",
+      "text-base": "#ffffca"
     }
   }
 }

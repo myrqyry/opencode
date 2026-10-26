@@ -1,17 +1,17 @@
 {
   "$schema": "https://opencode.ai/desktop-theme.json",
-  "name": "Earthbound Darker",
+  "name": "EarthBound — Darker",
   "id": "earthbound-darker",
   "light": {
     "palette": {
       "neutral": "#f3f3f3",
       "ink": "#1b1b1b",
       "primary": "#14813f",
-      "accent": "#387392",
-      "success": "#707113",
-      "warning": "#707113",
-      "error": "#a84c38",
-      "info": "#0174a5"
+      "accent": "#3a7593",
+      "success": "#158224",
+      "warning": "#717215",
+      "error": "#aa4d39",
+      "info": "#0576a6"
     }
   },
   "dark": {
@@ -20,10 +20,14 @@
       "ink": "#ffffff",
       "primary": "#25ff81",
       "accent": "#a0ddff",
-      "success": "#fafd51",
       "warning": "#fafd51",
       "error": "#fb967f",
-      "info": "#70caff"
+      "info": "#70caff",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#080808",
+      "text-base": "#ffffff"
     }
   }
 }

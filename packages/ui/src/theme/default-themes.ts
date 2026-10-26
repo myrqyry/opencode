@@ -142,6 +142,7 @@ import colorwayTwitchDarkThemeJson from "./themes/twitch-dark.json"
 import colorwayYouTubeDarkThemeJson from "./themes/you-tube-dark.json"
 import colorwayZombieThreedThemeJson from "./themes/zombie-threed.json"
 import colorwayZombieThreedDarkerThemeJson from "./themes/zombie-threed-darker.json"
+import colorwayEarthBoundDevilSMachineThemeJson from "./themes/earth-bound-devil-s-machine.json"
 
 export const oc2Theme = oc2ThemeJson as DesktopTheme
 export const amoledTheme = amoledThemeJson as DesktopTheme
@@ -286,6 +287,7 @@ export const colorwayTwitchDarkTheme = colorwayTwitchDarkThemeJson as DesktopThe
 export const colorwayYouTubeDarkTheme = colorwayYouTubeDarkThemeJson as DesktopTheme
 export const colorwayZombieThreedTheme = colorwayZombieThreedThemeJson as DesktopTheme
 export const colorwayZombieThreedDarkerTheme = colorwayZombieThreedDarkerThemeJson as DesktopTheme
+export const colorwayEarthBoundDevilSMachineTheme = colorwayEarthBoundDevilSMachineThemeJson as DesktopTheme
 
 export const DEFAULT_THEMES: Record<string, DesktopTheme> = {
   "oc-2": oc2Theme,
@@ -431,4 +433,5 @@ export const DEFAULT_THEMES: Record<string, DesktopTheme> = {
   "you-tube-dark": colorwayYouTubeDarkTheme,
   "zombie-threed": colorwayZombieThreedTheme,
   "zombie-threed-darker": colorwayZombieThreedDarkerTheme,
+  "earth-bound-devil-s-machine": colorwayEarthBoundDevilSMachineTheme,
 }

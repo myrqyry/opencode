@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/desktop-theme.json",
+  "name": "EarthBound — Devil’s Machine",
+  "id": "earth-bound-devil-s-machine",
+  "light": {
+    "palette": {
+      "neutral": "#fcf0ee",
+      "ink": "#271515",
+      "primary": "#77667c",
+      "accent": "#8c6060",
+      "success": "#158224",
+      "warning": "#8f6231",
+      "error": "#b24624",
+      "info": "#756199"
+    }
+  },
+  "dark": {
+    "palette": {
+      "neutral": "#170000",
+      "ink": "#ffcccc",
+      "primary": "#938198",
+      "accent": "#ffcccc",
+      "warning": "#ffcc99",
+      "error": "#ff8c69",
+      "info": "#b4a0dc",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#170000",
+      "text-base": "#ffcccc"
+    }
+  }
+}

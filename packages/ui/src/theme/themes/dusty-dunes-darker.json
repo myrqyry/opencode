@@ -1,17 +1,17 @@
 {
   "$schema": "https://opencode.ai/desktop-theme.json",
-  "name": "Dusty Dunes Darker",
+  "name": "EarthBound — Dusty Dunes Darker",
   "id": "dusty-dunes-darker",
   "light": {
     "palette": {
       "neutral": "#f3f3f3",
       "ink": "#211a03",
       "primary": "#826907",
-      "accent": "#826917",
-      "success": "#856714",
-      "warning": "#846806",
-      "error": "#b43c42",
-      "info": "#846806"
+      "accent": "#836a19",
+      "success": "#158224",
+      "warning": "#856a09",
+      "error": "#b73f45",
+      "info": "#856a09"
     }
   },
   "dark": {
@@ -20,10 +20,14 @@
       "ink": "#f9e4a1",
       "primary": "#f6d56a",
       "accent": "#ffe08a",
-      "success": "#d4a830",
       "warning": "#ffd03c",
       "error": "#ff8080",
-      "info": "#ffd03c"
+      "info": "#ffd03c",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#080808",
+      "text-base": "#f9e4a1"
     }
   }
 }

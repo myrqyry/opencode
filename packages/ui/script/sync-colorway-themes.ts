@@ -16,112 +16,19 @@
 
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { contrastRatio, hexToOklch, oklchToHex } from "../src/theme/color"
-import type { DesktopTheme, HexColor, ThemePaletteColors } from "../src/theme/types"
+import { parseOvt, darkPalette, desktopVariant, lightPalette, canonicalThemeIdentity } from "../src/theme/colorway-conversion"
+import type { DesktopTheme, ThemePaletteColors } from "../src/theme/types"
 
 const colorwayDir = process.env.COLORWAY_DIR ?? join(homedir(), "loam", "colorway")
 const sourceDir = join(colorwayDir, "themes")
 const targetDir = import.meta.dir + "/../src/theme/themes"
 const registryPath = import.meta.dir + "/../src/theme/default-themes.ts"
 
-const MIN_CONTRAST = 4.5
 const check = process.argv.includes("--check")
-
-// The confirmed Colorway -> desktop mapping. Five `--primary*` slots carry the theme's accent
-// set; OBS's generic `--success` is a placeholder in most themes and is deliberately unused.
-const MAPPING = {
-  neutral: "--bg_window",
-  ink: "--text",
-  primary: "--primary",
-  accent: "--primary_lighter",
-  success: "--primary_dark",
-  warning: "--warning",
-  error: "--danger",
-  info: "--primary_light",
-} as const
-
-type Ovt = { name: string; dark: boolean; vars: Record<string, string> }
-
-function parseOvt(text: string): Ovt {
-  const name = text.match(/name:\s*['"]([^'"]+)['"]/)?.[1] ?? ""
-  const darkMatch = text.match(/dark:\s*['"]([^'"]+)['"]/)
-  // An absent `dark:` key means dark; only an explicit 'false' is light.
-  const dark = darkMatch ? darkMatch[1]?.toLowerCase() === "true" : true
-  const vars: Record<string, string> = {}
-  const block = text.match(/@OBSThemeVars\s*\{([\s\S]*?)\n\}/)
-  if (block) {
-    for (const line of block[1]!.split("\n")) {
-      const match = line.match(/^\s*(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8})\s*;/)
-      if (match) vars[match[1]!] = match[2]!.toLowerCase()
-    }
-  }
-  return { name, dark, vars }
-}
-
-function slug(name: string) {
-  return name
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
+const baseColors = parseOvt(await Bun.file(join(sourceDir, "Colorway.obt")).text()).vars
 
 function title(name: string) {
   return name.replace(/\s*—\s*/g, " — ").replace(/\s+/g, " ").trim()
-}
-
-// Dark palette: direct read of the mapped Colorway tokens.
-function darkPalette(vars: Record<string, string>): ThemePaletteColors {
-  const read = (token: string, fallback: string) => (vars[token] ?? fallback).toLowerCase() as HexColor
-  return {
-    neutral: read(MAPPING.neutral, "#1e1e1e"),
-    ink: read(MAPPING.ink, "#e6e6e6"),
-    primary: read(MAPPING.primary, "#7aa2f7"),
-    accent: read(MAPPING.accent, "#bb9af7"),
-    success: read(MAPPING.success, "#9ece6a"),
-    warning: read(MAPPING.warning, "#e0af68"),
-    error: read(MAPPING.error, "#f7768e"),
-    info: read(MAPPING.info, "#7dcfff"),
-  }
-}
-
-// Light palette: same hues, flipped lightness. Accents are darkened until they clear the
-// contrast floor so a bright dark-mode accent does not become unreadable on a pale surface.
-function lightPalette(dark: ThemePaletteColors): ThemePaletteColors {
-  const neutralOklch = hexToOklch(dark.neutral)
-  const neutral = oklchToHex({
-    l: 0.965,
-    c: Math.min(neutralOklch.c * 0.25, 0.02),
-    h: neutralOklch.h,
-  })
-  const inkOklch = hexToOklch(dark.ink)
-  const ink = oklchToHex({
-    l: 0.22,
-    c: Math.min(inkOklch.c * 0.5, 0.04),
-    h: inkOklch.h,
-  })
-
-  const accent = (hex: HexColor): HexColor => {
-    const base = hexToOklch(hex)
-    let l = Math.min(base.l, 0.62)
-    let out = oklchToHex({ l, c: base.c, h: base.h })
-    while (contrastRatio(out, neutral) < MIN_CONTRAST && l > 0.26) {
-      l -= 0.03
-      out = oklchToHex({ l, c: base.c, h: base.h })
-    }
-    return out
-  }
-
-  return {
-    neutral,
-    ink,
-    primary: accent(dark.primary),
-    accent: accent(dark.accent ?? dark.primary),
-    success: accent(dark.success),
-    warning: accent(dark.warning),
-    error: accent(dark.error),
-    info: accent(dark.info),
-  }
 }
 
 function paletteKey(palette: ThemePaletteColors) {
@@ -138,8 +45,10 @@ function paletteKey(palette: ThemePaletteColors) {
 }
 
 const existing = new Map<string, string>()
+const existingThemes: { file: string; theme: DesktopTheme }[] = []
 for (const file of new Bun.Glob("*.json").scanSync(targetDir)) {
   const theme = (await Bun.file(join(targetDir, file)).json()) as DesktopTheme
+  existingThemes.push({ file, theme })
   if (theme.dark && "palette" in theme.dark && theme.dark.palette) {
     existing.set(file, paletteKey(theme.dark.palette))
   }
@@ -157,13 +66,12 @@ const idCollisions: string[] = []
 let checkFailed = false
 
 for (const file of [...new Bun.Glob("*.ovt").scanSync(sourceDir)].sort()) {
-  const ovt = parseOvt(await Bun.file(join(sourceDir, file)).text())
-  const id = slug(ovt.name)
+  const ovt = parseOvt(await Bun.file(join(sourceDir, file)).text(), baseColors)
+  const { id, file: jsonFile } = canonicalThemeIdentity(ovt.name, existingThemes)
   if (!id) continue
 
-  const dark = darkPalette(ovt.vars)
+  const dark = darkPalette(ovt.vars, baseColors["--success"])
   const key = paletteKey(dark)
-  const jsonFile = `${id}.json`
   const isOwned = ownedFiles.has(jsonFile)
 
   // Light Colorway themes are out of scope: only the dark corpus is ported.
@@ -195,7 +103,7 @@ for (const file of [...new Bun.Glob("*.ovt").scanSync(sourceDir)].sort()) {
       name: title(ovt.name),
       id,
       light: { palette: lightPalette(dark) },
-      dark: { palette: dark },
+      dark: desktopVariant(ovt.vars, baseColors["--success"]),
     },
   })
 }

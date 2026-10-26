@@ -6,12 +6,12 @@
     "palette": {
       "neutral": "#f2f3f9",
       "ink": "#171a26",
-      "primary": "#a74859",
-      "accent": "#9c572e",
-      "success": "#9e5159",
-      "warning": "#9c572e",
-      "error": "#a74859",
-      "info": "#9e5159"
+      "primary": "#aa4b5c",
+      "accent": "#9e5930",
+      "success": "#158224",
+      "warning": "#9e5930",
+      "error": "#aa4b5c",
+      "info": "#a0525b"
     }
   },
   "dark": {
@@ -20,10 +20,14 @@
       "ink": "#cad3f5",
       "primary": "#ed8796",
       "accent": "#f5a97f",
-      "success": "#ee99a0",
       "warning": "#f5a97f",
       "error": "#ed8796",
-      "info": "#ee99a0"
+      "info": "#ee99a0",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#1e2030",
+      "text-base": "#cad3f5"
     }
   }
 }

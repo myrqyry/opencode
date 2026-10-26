@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/desktop-theme.json",
-  "name": "Moonside",
+  "name": "EarthBound — Moonside",
   "id": "moonside",
   "light": {
     "palette": {
@@ -8,10 +8,10 @@
       "ink": "#1b1b1b",
       "primary": "#4e7b18",
       "accent": "#727005",
-      "success": "#2e67c8",
-      "warning": "#2e67c8",
-      "error": "#bd245d",
-      "info": "#6f7118"
+      "success": "#158224",
+      "warning": "#316acb",
+      "error": "#bf275e",
+      "info": "#71721a"
     }
   },
   "dark": {
@@ -20,10 +20,14 @@
       "ink": "#ffffff",
       "primary": "#aaef64",
       "accent": "#ffff79",
-      "success": "#5e9aff",
       "warning": "#5e9aff",
       "error": "#ff6693",
-      "info": "#f6f929"
+      "info": "#f6f929",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#000000",
+      "text-base": "#ffffff"
     }
   }
 }

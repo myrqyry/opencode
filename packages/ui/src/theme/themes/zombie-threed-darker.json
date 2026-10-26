@@ -1,17 +1,17 @@
 {
   "$schema": "https://opencode.ai/desktop-theme.json",
-  "name": "Zombie Threed Darker",
+  "name": "EarthBound — Zombie Threed Darker",
   "id": "zombie-threed-darker",
   "light": {
     "palette": {
       "neutral": "#f3f3f3",
       "ink": "#181b1d",
-      "primary": "#ab4a2c",
-      "accent": "#7f6a19",
-      "success": "#188043",
-      "warning": "#82691a",
-      "error": "#c21f45",
-      "info": "#82691a"
+      "primary": "#ac4c2d",
+      "accent": "#806c1b",
+      "success": "#158224",
+      "warning": "#866900",
+      "error": "#cd0043",
+      "info": "#866900"
     }
   },
   "dark": {
@@ -20,10 +20,14 @@
       "ink": "#f0faff",
       "primary": "#f89070",
       "accent": "#ffe070",
-      "success": "#2fff89",
       "warning": "#ffcf32",
       "error": "#ff4a6a",
-      "info": "#ffcf32"
+      "info": "#ffcf32",
+      "success": "#37d247"
+    },
+    "overrides": {
+      "background-base": "#080808",
+      "text-base": "#f0faff"
     }
   }
 }
