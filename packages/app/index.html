@@ -23,6 +23,21 @@
   <body class="antialiased overscroll-none text-12-regular overflow-hidden bg-v2-background-bg-deep">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root" class="flex flex-col h-dvh bg-v2-background-bg-deep p-px"></div>
+    <div id="meristem-restart-splash" aria-live="polite" style="display:none;position:fixed;inset:0;z-index:2147483647;align-items:center;justify-content:center;gap:14px;flex-direction:column;background:var(--v2-background-bg-deep,#fafafa);color:var(--v2-text-text-base,#111);font:500 13px/1.4 system-ui,sans-serif">
+      <div aria-hidden="true" style="width:28px;height:28px;border-radius:9999px;border:3px solid rgba(0,0,0,.12);border-top-color:var(--project-accent,var(--meristem-accent,#625df5));animation:meristem-restart-spin .9s linear infinite"></div>
+      <span>Restarting OpenCode…</span>
+    </div>
+    <style>
+      @keyframes meristem-restart-spin { to { transform: rotate(360deg); } }
+    </style>
+    <script>
+      try {
+        if (sessionStorage.getItem("meristem.restarting") === "1") {
+          const splash = document.getElementById("meristem-restart-splash");
+          if (splash) splash.style.display = "flex";
+        }
+      } catch {}
+    </script>
     <script src="/src/entry.tsx" type="module"></script>
   </body>
 </html>

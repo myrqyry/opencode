@@ -17,12 +17,14 @@ function persisted(value = ""): PromptInputV2PersistedState {
 }
 
 describe("prompt input v2 interaction machine", () => {
-  test("opens inline commands only when slash is the entire prompt", () => {
+  test("opens inline commands when slash appears anywhere in the prompt", () => {
     const state = createPromptInputV2InteractionState()
     const open = transitionPromptInputV2(state, { type: "input.changed", value: "/re" }, persisted())
-    const closed = transitionPromptInputV2(state, { type: "input.changed", value: "explain /re" }, persisted())
+    const openInline = transitionPromptInputV2(state, { type: "input.changed", value: "explain /re" }, persisted())
+    const closed = transitionPromptInputV2(state, { type: "input.changed", value: "explain /re foo" }, persisted())
 
     expect(open.state.popover).toEqual({ type: "command-inline", query: "re" })
+    expect(openInline.state.popover).toEqual({ type: "command-inline", query: "re" })
     expect(closed.state.popover).toEqual({ type: "closed" })
   })
 

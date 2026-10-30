@@ -4,7 +4,7 @@ import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { Tag } from "@opencode-ai/ui/tag"
 import { showToast } from "@/utils/toast"
 import { popularProviders, useProviders } from "@/hooks/use-providers"
-import { createMemo, type Component, For, Show } from "solid-js"
+import { createMemo, createSignal, type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { useServerProtocol, useServerSDK } from "@/context/server-sdk"
 import { useServerSync } from "@/context/server-sync"
@@ -43,6 +43,7 @@ const SettingsProvidersContent: Component<{ onBack?: () => void }> = (props) => 
   const serverSync = useServerSync()
   const providers = useProviders(() => undefined)
   const providerConnect = useProviderConnectController({ onBack: props.onBack })
+  const [showAllProviders, setShowAllProviders] = createSignal(false)
 
   const connect = (provider?: string) => {
     providerConnect.select(provider)
@@ -62,6 +63,15 @@ const SettingsProvidersContent: Component<{ onBack?: () => void }> = (props) => 
       .filter((p) => !connectedIDs.has(p.id))
       .slice()
     items.sort((a, b) => popularProviders.indexOf(a.id) - popularProviders.indexOf(b.id))
+    return items
+  })
+
+  const other = createMemo(() => {
+    const connectedIDs = new Set(connected().map((p) => p.id))
+    const items = [...providers.all().values()].filter(
+      (p) => !connectedIDs.has(p.id) && !popularProviders.includes(p.id),
+    )
+    items.sort((a, b) => a.name.localeCompare(b.name))
     return items
   })
 
@@ -221,6 +231,24 @@ const SettingsProvidersContent: Component<{ onBack?: () => void }> = (props) => 
               )}
             </For>
 
+            <Show when={showAllProviders()}>
+              <For each={other()}>
+                {(item) => (
+                  <div class="flex flex-wrap items-center justify-between gap-4 min-h-16 py-3 border-b border-border-weak-base last:border-none">
+                    <div class="flex flex-col min-w-0">
+                      <div class="flex items-center gap-x-3">
+                        <ProviderIcon id={item.id} class="size-5 shrink-0 icon-strong-base" />
+                        <span class="text-14-medium text-text-strong">{item.name}</span>
+                      </div>
+                    </div>
+                    <Button size="large" variant="secondary" icon="plus-small" onClick={() => connect(item.id)}>
+                      {language.t("common.connect")}
+                    </Button>
+                  </div>
+                )}
+              </For>
+            </Show>
+
             <Show when={protocol() === "v1"}>
               <div
                 class="flex items-center justify-between gap-4 min-h-16 border-b border-border-weak-base last:border-none flex-wrap py-3"
@@ -250,13 +278,15 @@ const SettingsProvidersContent: Component<{ onBack?: () => void }> = (props) => 
             </Show>
           </SettingsList>
 
-          <Button
-            variant="ghost"
-            class="px-0 py-0 mt-5 text-14-medium text-text-interactive-base text-left justify-start hover:bg-transparent active:bg-transparent"
-            onClick={() => connect()}
-          >
-            {language.t("dialog.provider.viewAll")}
-          </Button>
+          <Show when={!showAllProviders()}>
+            <Button
+              variant="ghost"
+              class="px-0 py-0 mt-5 text-14-medium text-text-interactive-base text-left justify-start hover:bg-transparent active:bg-transparent"
+              onClick={() => setShowAllProviders(true)}
+            >
+              {language.t("dialog.provider.viewAll")}
+            </Button>
+          </Show>
         </div>
       </div>
     </div>

@@ -381,6 +381,12 @@ export function MessageTimeline(props: {
     cancelAnimationFrame(prependAnchorFrame)
     prependAnchorFrame = undefined
   }
+  const clearPrependAnchorForGesture = (target: EventTarget | null) => {
+    const element = target instanceof Element ? target : undefined
+    const nested = element?.closest("[data-scrollable]")
+    if (nested && nested !== listRoot()) return
+    clearPrependAnchor()
+  }
   const capturePrependAnchor = () => {
     prependLoading = true
     updatePrependAnchor()
@@ -587,7 +593,7 @@ export function MessageTimeline(props: {
   }
 
   const handleListWheel = (event: WheelEvent & { currentTarget: HTMLDivElement }) => {
-    if (!prependLoading) clearPrependAnchor()
+    clearPrependAnchorForGesture(event.target)
     const root = event.currentTarget
     const delta = normalizeWheelDelta({
       deltaY: event.deltaY,
@@ -599,7 +605,7 @@ export function MessageTimeline(props: {
   }
 
   const handleListTouchStart = (event: TouchEvent) => {
-    if (!prependLoading) clearPrependAnchor()
+    clearPrependAnchorForGesture(event.target)
     touchGesture = event.touches[0]?.clientY
   }
 
@@ -625,7 +631,7 @@ export function MessageTimeline(props: {
   }
 
   const handleListPointerDown = (event: PointerEvent & { currentTarget: HTMLDivElement }) => {
-    if (!prependLoading) clearPrependAnchor()
+    clearPrependAnchorForGesture(event.target)
     props.onMarkScrollGesture(event.target)
   }
 
@@ -639,7 +645,7 @@ export function MessageTimeline(props: {
     if (!key) return
     if (!isScrollKeyTarget(event.target, key)) return
     if (scrollKeyOwner(event.currentTarget, event.target, key) !== event.currentTarget) return
-    if (!prependLoading) clearPrependAnchor()
+    clearPrependAnchorForGesture(event.currentTarget)
     props.onMarkScrollGesture(event.currentTarget)
   }
 

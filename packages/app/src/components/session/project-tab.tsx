@@ -9,11 +9,14 @@ export function ProjectTabStrip(
     listRef?: (element: HTMLDivElement) => void
     role?: "tablist"
     ariaLabel?: string
+    projectAccent?: string
   }>,
 ) {
   return (
     <div
       data-slot="project-tab-strip"
+      data-project-tint={props.projectAccent ? "" : undefined}
+      style={props.projectAccent ? `--project-accent:${props.projectAccent}` : undefined}
       class="flex h-9 shrink-0 items-center border-b border-project-outline bg-project-surface-high px-1.5"
     >
       <div

@@ -1,15 +1,21 @@
-# js
+# OpenCode CLI and Server
 
-To install dependencies:
+This package contains the OpenCode CLI and server runtime. The terminal UI implementation lives in `packages/tui`.
+
+Install workspace dependencies from the repository root:
 
 ```bash
 bun install
 ```
 
-To run:
+To inspect the CLI commands from the repository root:
 
 ```bash
-bun run index.ts
+bun dev --help
 ```
 
-This project was created using `bun init` in bun v1.2.12. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+To run the CLI entry point directly from this package directory:
+
+```bash
+bun run ./src/index.ts --help
+```

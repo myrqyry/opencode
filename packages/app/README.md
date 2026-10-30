@@ -1,50 +1,43 @@
-## Usage
+# OpenCode Web App
 
-Dependencies for these templates are managed with [pnpm](https://pnpm.io) using `pnpm up -Lri`.
+The shared OpenCode browser UI is a SolidJS application built with Vite. Dependencies are managed by the Bun workspace; install them from the repository root with `bun install`.
 
-This is the reason you see a `pnpm-lock.yaml`. That said, any package manager will work. This file can safely be removed once you clone a template.
+## Development
+
+Start the OpenCode API server from the repository root:
 
 ```bash
-$ npm install # or pnpm install or yarn install
+bun dev serve --port 4096
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm run dev` or `npm start`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.<br>
-
-### `npm run build`
-
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## E2E Testing
-
-Playwright starts the Vite dev server automatically via `webServer`, and UI tests expect an opencode backend at `localhost:4096` by default.
+In another terminal, start the web app from the repository root:
 
 ```bash
-bunx playwright install chromium
+bun run --cwd packages/app dev
+```
+
+Vite serves the app on port 3000 by default. The UI connects to the API server at `localhost:4096`; set `VITE_OPENCODE_SERVER_HOST` or `VITE_OPENCODE_SERVER_PORT` to use another address.
+
+## Checks
+
+Run checks and tests from `packages/app`:
+
+```bash
+bun typecheck
+bun run build
+bun run test:unit
+bun run test:browser
+```
+
+## End-to-end tests
+
+Playwright starts the Vite dev server automatically. The OpenCode API server must be available at `127.0.0.1:4096` by default.
+
+Run end-to-end tests from `packages/app`:
+
+```bash
 bun run test:e2e:local
 bun run test:e2e:local -- --grep "settings"
 ```
 
-Environment options:
-
-- `PLAYWRIGHT_SERVER_HOST` / `PLAYWRIGHT_SERVER_PORT` (backend address, default: `localhost:4096`)
-- `PLAYWRIGHT_PORT` (Vite dev server port, default: `3000`)
-- `PLAYWRIGHT_BASE_URL` (override base URL, default: `http://localhost:<PLAYWRIGHT_PORT>`)
-
-## Deployment
-
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
+`PLAYWRIGHT_SERVER_HOST` and `PLAYWRIGHT_SERVER_PORT` select the API server, while `PLAYWRIGHT_PORT` and `PLAYWRIGHT_BASE_URL` configure the Vite test server URL. See `playwright.config.ts` for defaults and related options.

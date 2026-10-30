@@ -7,7 +7,14 @@ import { tabKey, type Tab, useTabs } from "@/context/tabs"
 import { useSync } from "@/context/sync"
 import { useLanguage } from "@/context/language"
 import { pathKey } from "@/utils/path-key"
+import { useProjectColor } from "@/utils/project-color"
 import { ProjectTab, ProjectTabStrip } from "@/components/session"
+import { SessionCompletionStatus } from "@/pages/layout/session-completion-icon"
+
+function SessionTabStatus(props: { server: ServerConnection.Key; tab: Tab }) {
+  const sessionId = createMemo(() => (props.tab.type === "session" ? props.tab.sessionId : undefined))
+  return <SessionCompletionStatus server={props.server} sessionId={sessionId()} />
+}
 
 export function SessionChatTabs(props: {
   server: ServerConnection.Key
@@ -17,6 +24,8 @@ export function SessionChatTabs(props: {
   const layout = useLayout()
   const sync = useSync()
   const language = useLanguage()
+  const projectColor = useProjectColor()
+  const projectAccent = createMemo(() => projectColor.resolve(sync().project ?? { worktree: props.directory }))
   const [motionKey, setMotionKey] = createSignal<string>()
   let motionTimer: number | undefined
 
@@ -126,6 +135,7 @@ export function SessionChatTabs(props: {
 
   return (
     <ProjectTabStrip
+      projectAccent={projectAccent()}
       end={
         <div class="flex shrink-0 items-center gap-1">
           <Show when={props.directory}>
@@ -167,8 +177,10 @@ export function SessionChatTabs(props: {
                   >
                     <IconV2 name={icon()} size="small" />
                   </span>
-                )
-}
+                )}
+              </Show>
+              <Show when={tab.type === "session"}>
+                <SessionTabStatus server={props.server} tab={tab} />
               </Show>
               <span class="min-w-0 truncate">{title(tab)}</span>
             </ProjectTab>

@@ -4,7 +4,7 @@ import { create } from "@opencode-ai/ui/storybook/scaffold"
 import { markdown } from "@opencode-ai/ui/storybook/fixtures"
 
 const docs = `### Overview
-Render sanitized Markdown with code blocks, inline code, and safe links.
+Render sanitized Markdown with code blocks, inline code, safe links, and sandboxed HTML previews.
 
 Pair with \`Code\` for standalone code views.
 
@@ -14,6 +14,7 @@ Pair with \`Code\` for standalone code views.
 
 ### Variants and states
 - Code blocks include copy buttons when rendered.
+- HTML code fences include a toggle to preview the example in an isolated iframe.
 
 ### Behavior
 - Sanitizes HTML and auto-converts inline URL code to links.

@@ -168,7 +168,7 @@ This repository uses Meristem project state.
 Before non-trivial work:
 
 1. Treat current repository/runtime evidence as the authority for what exists now.
-2. Read `.meristem/PROJECT.md` for durable project purpose, invariants, and architecture boundaries when relevant.
+2. If `.meristem/PROJECT.md` exists, read it for durable project purpose, invariants, and architecture boundaries.
 3. If `ACTIVE_WORK.md` exists, read it for the current objective, locked decisions, constraints, verification state, and unresolved uncertainty.
 4. Consult `.meristem/DECISIONS.md`, `LEARNINGS.md`, `ERRORS.md`, or `FEATURE_REQUESTS.md` only when they can materially change the current task.
 5. Do not promote session detail into durable files merely because it is recent. Persist consequential state before dependent continuation when losing it would make later work expensive or misleading.

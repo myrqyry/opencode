@@ -102,7 +102,7 @@ function inputChanged(
     ])
   }
 
-  const command = value.match(/^\/(\S*)$/)
+  const command = (value.slice(0, (cursor && cursor > 0 ? cursor : value.length))).match(/(?:^|\s)\/(\S*)$/)
   if (command) {
     const query = command[1] ?? ""
     return changed({ ...state, popover: { type: "command-inline", query }, focus: "editor" }, [
@@ -239,8 +239,19 @@ function populated(persisted: PromptInputV2PersistedState) {
   )
 }
 
+function slashCommandTriggerIndex(value: string) {
+  for (let index = value.lastIndexOf("/"); index >= 0; index = value.lastIndexOf("/", index - 1)) {
+    const before = index === 0 ? undefined : value[index - 1]
+    const after = value.slice(index)
+    if ((before === undefined || /\s/.test(before)) && !/\s/.test(after.slice(1))) {
+      return index
+    }
+  }
+  return -1
+}
+
 function replaceTrigger(value: string, trigger: "@" | "/", replacement: string) {
-  const index = trigger === "/" ? value.indexOf(trigger) : value.lastIndexOf(trigger)
+  const index = trigger === "/" ? slashCommandTriggerIndex(value) : value.lastIndexOf(trigger)
   return index < 0 ? replacement : value.slice(0, index) + replacement
 }
 

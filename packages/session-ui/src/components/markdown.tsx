@@ -32,6 +32,7 @@ import { markdownBlockKey, type MarkdownToken } from "./markdown-worker-protocol
 import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-state"
 import { getCachedMarkdown, sanitizeMarkdown, touchCachedMarkdown, type MarkdownCacheEntry } from "./markdown-cache"
 import { inlineCodeKind } from "./markdown-inline-code-kind"
+import { HTML_PREVIEW_SANDBOX, htmlPreviewDocument, isHtmlPreviewLanguage } from "./markdown-html-preview"
 
 type RenderedBlock =
   | (MarkdownCacheEntry & { key: string; mode: Exclude<Block["mode"], "code"> })
@@ -90,6 +91,8 @@ async function code(text: string, language: string | undefined, key: string, com
 type CopyLabels = {
   copy: string
   copied: string
+  preview: string
+  hidePreview: string
 }
 
 type CopyButtonState = {
@@ -216,10 +219,12 @@ function ensureCodeWrapper(block: HTMLPreElement, labels: CopyLabels) {
     parent.replaceChild(wrapper, block)
     wrapper.appendChild(block)
     wrapper.appendChild(createCopyButton(labels))
+    ensureHtmlPreview(wrapper, labels)
     return
   }
 
   applyCodeMetadata(parent, codeLanguage(block))
+  ensureHtmlPreview(parent, labels)
 
   const buttons = Array.from(parent.querySelectorAll('[data-slot="markdown-copy-button"]')).filter(
     (el): el is HTMLButtonElement => el instanceof HTMLButtonElement,
@@ -234,6 +239,56 @@ function ensureCodeWrapper(block: HTMLPreElement, labels: CopyLabels) {
     disposeCopyButton(button)
     button.remove()
   }
+}
+
+function ensureHtmlPreview(wrapper: HTMLElement, labels: CopyLabels) {
+  const pre = wrapper.querySelector("pre")
+  const language = pre ? codeLanguage(pre) : undefined
+  const supported = isHtmlPreviewLanguage(language)
+  const existing = wrapper.querySelector<HTMLButtonElement>('[data-slot="markdown-html-preview"]')
+  if (!supported) {
+    existing?.remove()
+    wrapper.querySelector('[data-slot="markdown-html-preview-frame"]')?.remove()
+    return
+  }
+
+  const button = existing ?? document.createElement("button")
+  button.type = "button"
+  button.dataset.slot = "markdown-html-preview"
+  button.dataset.expanded = button.getAttribute("aria-expanded") === "true" ? "true" : "false"
+  button.setAttribute("aria-label", button.dataset.expanded === "true" ? labels.hidePreview : labels.preview)
+  button.setAttribute("aria-expanded", button.dataset.expanded)
+  button.textContent = "HTML"
+  if (!existing) wrapper.appendChild(button)
+
+  const preview = wrapper.querySelector<HTMLDivElement>('[data-slot="markdown-html-preview-frame"]')
+  if (button.dataset.expanded !== "true") {
+    preview?.remove()
+    return
+  }
+
+  const frame = preview?.querySelector<HTMLIFrameElement>("iframe") ?? document.createElement("iframe")
+  frame.title = "example.html"
+  frame.setAttribute("sandbox", HTML_PREVIEW_SANDBOX)
+  frame.setAttribute("referrerpolicy", "no-referrer")
+  frame.setAttribute("loading", "lazy")
+  frame.srcdoc = htmlPreviewDocument(wrapper.querySelector("code")?.textContent ?? "")
+  if (!preview) {
+    const content = document.createElement("div")
+    content.dataset.slot = "markdown-html-preview-frame"
+    content.appendChild(frame)
+    wrapper.appendChild(content)
+  }
+}
+
+function toggleHtmlPreview(button: HTMLButtonElement, labels: CopyLabels) {
+  const wrapper = button.closest<HTMLElement>('[data-component="markdown-code"]')
+  if (!wrapper) return
+  const expanded = button.getAttribute("aria-expanded") !== "true"
+  button.dataset.expanded = expanded ? "true" : "false"
+  button.setAttribute("aria-expanded", button.dataset.expanded)
+  button.setAttribute("aria-label", expanded ? labels.hidePreview : labels.preview)
+  ensureHtmlPreview(wrapper, labels)
 }
 
 function markCodeLinks(root: HTMLDivElement) {
@@ -297,6 +352,12 @@ function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
   const handleClick = async (event: MouseEvent) => {
     const target = event.target
     if (!(target instanceof Element)) return
+
+    const preview = target.closest<HTMLButtonElement>('[data-slot="markdown-html-preview"]')
+    if (preview) {
+      toggleHtmlPreview(preview, getLabels())
+      return
+    }
 
     const button = target.closest('[data-slot="markdown-copy-button"]')
     if (!(button instanceof HTMLElement)) return
@@ -508,6 +569,8 @@ export function Markdown(
     const labels = {
       copy: i18n.t("ui.message.copy"),
       copied: i18n.t("ui.message.copied"),
+      preview: i18n.t("ui.common.showMore"),
+      hidePreview: i18n.t("ui.common.close"),
     }
     const nextCodeKeys = new Set(content.filter((block) => block.mode === "code").map((block) => block.key))
     activeCodeKeys.forEach((key) => {
@@ -529,6 +592,8 @@ export function Markdown(
       copyCleanup = setupCodeCopy(container, () => ({
         copy: i18n.t("ui.message.copy"),
         copied: i18n.t("ui.message.copied"),
+        preview: i18n.t("ui.common.showMore"),
+        hidePreview: i18n.t("ui.common.close"),
       }))
   })
 
@@ -617,8 +682,10 @@ function updateBlock(container: HTMLDivElement, index: number, block: RenderedBl
       if (
         fromEl instanceof HTMLElement &&
         toEl instanceof HTMLElement &&
-        fromEl.getAttribute("data-slot") === "markdown-copy-button" &&
-        toEl.getAttribute("data-slot") === "markdown-copy-button"
+        fromEl.getAttribute("data-slot") === toEl.getAttribute("data-slot") &&
+        ["markdown-copy-button", "markdown-html-preview", "markdown-html-preview-frame"].includes(
+          fromEl.getAttribute("data-slot") ?? "",
+        )
       ) {
         return false
       }
@@ -630,6 +697,7 @@ function updateBlock(container: HTMLDivElement, index: number, block: RenderedBl
       return true
     },
   })
+  decorate(current, labels)
 }
 
 function updateCodeBlock(
@@ -675,6 +743,7 @@ function updateCodeBlock(
       unstable: block.unstable,
       raw: block.raw,
     })
+    if (wrapper instanceof HTMLElement) ensureHtmlPreview(wrapper, labels)
     return
   }
 
@@ -689,6 +758,7 @@ function updateCodeBlock(
   pre.appendChild(codeElement)
   wrapper.appendChild(pre)
   wrapper.appendChild(createCopyButton(labels))
+  ensureHtmlPreview(wrapper, labels)
   next.appendChild(wrapper)
   renderedCodeTokens.set(next, {
     language: block.language,

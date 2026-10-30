@@ -1049,13 +1049,97 @@ const layer = Layer.effect(
       return { info, parts }
     }, Effect.scoped)
 
+    const expandInlineSlashCommands = Effect.fn("SessionPrompt.expandInlineSlashCommands")(function* (input: PromptInput) {
+      const cmdList = yield* commands.list()
+      const names = [...new Set(cmdList.map((cmd) => cmd.name))].sort((a, b) => b.length - a.length)
+      if (names.length === 0) return input
+      if (!(input.parts ?? []).some((part) => part.type === "text" && !!part.text)) return input
+
+      const alternation = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")
+      const triggerRegex = new RegExp(`(^|\\s)/(${alternation})(?:\\s+([\\s\\S]*?))?(?=(?:\\s+/(?:${alternation})(?:\\s|$))|$)`, "g")
+
+      const processText = (text: string) =>
+        Effect.gen(function* () {
+          const matches = [...text.matchAll(triggerRegex)]
+          if (matches.length === 0) return text
+
+          let result = ""
+          let lastIndex = 0
+          for (const match of matches) {
+            const start = match.index ?? 0
+            result += text.slice(lastIndex, start)
+
+            const cmd = yield* commands.get(match[2] ?? "")
+            if (!cmd) {
+              result += match[0]
+            } else {
+              const args = (match[3] ?? "").trim()
+              const templateCommand = yield* Effect.promise(async () => cmd.template)
+              const rawArgs = args.match(argsRegex) ?? []
+              const argArray = rawArgs.map((arg) => arg.replace(quoteTrimRegex, ""))
+              const placeholders = templateCommand.match(placeholderRegex) ?? []
+              let last = 0
+              for (const item of placeholders) {
+                const value = Number(item.slice(1))
+                if (value > last) last = value
+              }
+
+              const withArgs = templateCommand.replaceAll(placeholderRegex, (_, index) => {
+                const position = Number(index)
+                const argIndex = position - 1
+                if (argIndex >= argArray.length) return ""
+                if (position === last) return argArray.slice(argIndex).join(" ")
+                return argArray[argIndex] ?? ""
+              })
+              const usesArgumentsPlaceholder = templateCommand.includes("$ARGUMENTS")
+              let template = withArgs.replaceAll("$ARGUMENTS", args)
+              if (placeholders.length === 0 && !usesArgumentsPlaceholder && args.trim()) {
+                template = template + "\n\n" + args
+              }
+
+              const shellMatches = ConfigMarkdown.shell(template)
+              if (shellMatches.length > 0) {
+                const cfg = yield* config.get()
+                const sh = Shell.preferred(cfg.shell)
+                const results = yield* Effect.promise(() =>
+                  Promise.all(
+                    shellMatches.map(async ([, cmd]) => (await Process.text([cmd], { shell: sh, nothrow: true })).text),
+                  ),
+                )
+                let shellIndex = 0
+                template = template.replace(bashRegex, () => results[shellIndex++] ?? "")
+              }
+
+              result += (match[1] ?? "") + template.trim()
+            }
+
+            lastIndex = start + (match[0]?.length ?? 0)
+          }
+
+          result += text.slice(lastIndex)
+          return result
+        })
+
+      const parts = yield* Effect.forEach(input.parts ?? [], (part) =>
+        Effect.gen(function* () {
+          if (part.type !== "text") return part
+          const text = (part as { text?: string }).text ?? ""
+          const expandedText = yield* processText(text)
+          return { ...part, text: expandedText }
+        }),
+      )
+
+      return { ...input, parts }
+    })
+
     const prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error> = Effect.fn(
       "SessionPrompt.prompt",
     )(function* (input: PromptInput) {
-      const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
+      const expandedInput = yield* expandInlineSlashCommands(input)
+      const session = yield* sessions.get(expandedInput.sessionID).pipe(Effect.orDie)
       yield* revert.cleanup(session)
-      const message = yield* createUserMessage(input)
-      yield* sessions.touch(input.sessionID)
+      const message = yield* createUserMessage(expandedInput)
+      yield* sessions.touch(expandedInput.sessionID)
 
       const permissions: PermissionV1.Rule[] = []
       for (const [t, enabled] of Object.entries(input.tools ?? {})) {

@@ -14,7 +14,6 @@ import { type LocalProject, useLayout } from "@/context/layout"
 import { useProjectColor } from "@/utils/project-color"
 import { pathKey } from "@/utils/path-key"
 import { useLanguage } from "@/context/language"
-import { useNotification } from "@/context/notification"
 import { usePlatform } from "@/context/platform"
 import { useSettings } from "@/context/settings"
 import { ServerConnection, useServer } from "@/context/server"
@@ -22,6 +21,7 @@ import { useServerSync } from "@/context/server-sync"
 import { useServerSDK } from "@/context/server-sdk"
 import { tabKey, type Tab, type WorkspaceView, useTabs } from "@/context/tabs"
 import { displayName, getProjectAvatarSource, sortedRootSessions } from "@/pages/layout/helpers"
+import { SessionCompletionStatus } from "@/pages/layout/session-completion-icon"
 import { droppedFolderPaths, folderDragItems } from "@/pages/layout/sidebar-folder-drop"
 import { showToast } from "@/utils/toast"
 import { createHomeController } from "@/pages/home/home-controller"
@@ -125,9 +125,13 @@ function ProjectSessions(props: {
   nested?: boolean
 }) {
   const serverSync = useServerSync()
-  const notification = useNotification()
+  const server = useServer()
   const projectColor = useProjectColor()
   const projectAccent = createMemo(() => projectColor.resolve(props.project))
+  const serverKey = createMemo(() => {
+    const conn = server.current
+    return conn ? ServerConnection.key(conn) : undefined
+  })
   const [store, setStore] = serverSync().child(props.project.worktree, { bootstrap: false })
   const sessions = createMemo(() => sortedRootSessions(store, Date.now()))
   const [shown, setShown] = createSignal(5)
@@ -162,23 +166,11 @@ function ProjectSessions(props: {
     >
       <For each={visible()}>
         {(session) => (
-          <SidebarRow
-            label={session.title || session.id}
+          <ProjectSessionRow
+            server={serverKey()}
+            session={session}
             selected={props.selectedSessionID?.() === session.id}
-            onClick={() => props.onOpenSession(session)}
-            icon={
-              <Show
-                when={serverSync().session.data.session_working(session.id)}
-                fallback={
-                  <IconV2
-                    name={notification.session.unseenCount(session.id) > 0 ? "chat-filled" : "chat"}
-                    size="small"
-                  />
-                }
-              >
-                <IllusionSpinnerV2 class="size-4" />
-              </Show>
-            }
+            onOpenSession={props.onOpenSession}
           />
         )}
       </For>
@@ -192,6 +184,37 @@ function ProjectSessions(props: {
         </button>
       </Show>
     </div>
+  )
+}
+
+function ProjectSessionRow(props: {
+  server: ServerConnection.Key | undefined
+  session: Session
+  selected: boolean
+  onOpenSession: (session: Session) => void
+}) {
+  const serverSync = useServerSync()
+  const working = createMemo(() => serverSync().session.data.session_working(props.session.id))
+  return (
+    <SidebarRow
+      label={props.session.title || props.session.id}
+      selected={props.selected}
+      onClick={() => props.onOpenSession(props.session)}
+      icon={
+        <Show
+          when={working()}
+          fallback={
+            <SessionCompletionStatus
+              server={props.server}
+              sessionId={props.session.id}
+              fallback={<IconV2 name="chat" size="small" />}
+            />
+          }
+        >
+          <IllusionSpinnerV2 class="size-4" />
+        </Show>
+      }
+    />
   )
 }
 
@@ -553,8 +576,7 @@ export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle
     layout.home.setSelection({ server: server.key, directory: project.worktree })
   }
 
-  // Activating a project means "take me into its work": land on the tab already open for it,
-  // or start one, and expand the project so its previous chats are visible alongside.
+  // Activating a project lands on its open tab or starts one; the chevron owns expansion.
   const openProject = (project: LocalProject) => {
     const directories = new Set([project.worktree, ...(project.sandboxes ?? [])].map(pathKey))
     const directoryFor = (tab: Tab) =>
@@ -567,7 +589,6 @@ export function MeristemSidebar(props: { debugTools?: { visible: boolean; toggle
     const open = current && matches(current) ? current : tabs.store.find(matches)
     if (open) tabs.select(open)
     else void tabs.newDraft({ server: server.key, directory: project.worktree })
-    layout.sidebar.setWorkspaces(project.worktree, true)
     layout.home.setSelection({ server: server.key, directory: project.worktree })
     closeMobile()
   }

@@ -70,8 +70,9 @@ Then run it with:
 Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).
 
 - Core pieces:
-  - `packages/opencode`: OpenCode core business logic & server.
-  - `packages/opencode/src/cli/cmd/tui/`: The TUI code, written in SolidJS with [opentui](https://github.com/sst/opentui)
+  - `packages/opencode`: CLI and server runtime.
+  - `packages/opencode/src/cli/cmd/tui.ts`: TUI command and worker integration.
+  - `packages/tui`: Terminal UI implementation, written in SolidJS with [OpenTUI](https://github.com/sst/opentui).
   - `packages/app`: The shared web UI components, written in SolidJS
   - `packages/desktop`: The native desktop app, built with Electron (wraps `packages/app`)
   - `packages/plugin`: Source for `@opencode-ai/plugin`
@@ -99,10 +100,10 @@ opencode <directory>     # Start TUI in specific directory
 To start the OpenCode headless API server:
 
 ```bash
-bun dev serve
+bun dev serve --port 4096
 ```
 
-This starts the headless server on port 4096 by default. You can specify a different port:
+The server selects an available port when `--port` is omitted. Use port 4096 to match the web app and Playwright defaults. You can specify a different port:
 
 ```bash
 bun dev serve --port 8080
@@ -119,7 +120,7 @@ To test UI changes during development:
 bun run --cwd packages/app dev
 ```
 
-This starts a local dev server at http://localhost:5173 (or similar port shown in output). Most UI changes can be tested here, but the server must be running for full functionality.
+This starts a local dev server at http://localhost:3000 by default (or the next available port if it is occupied). Most UI changes can be tested here, but the OpenCode server must also be running for full functionality.
 
 ### Running the Desktop App
 
@@ -139,7 +140,7 @@ bun run --cwd packages/desktop package
 ```
 
 > [!NOTE]
-> If you make changes to the API or SDK (e.g. `packages/opencode/src/server/server.ts`), run `./script/generate.ts` to regenerate the SDK and related files.
+> For generated API/client surfaces, follow the repository instructions in [`AGENTS.md`](./AGENTS.md): after changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. To regenerate the legacy JavaScript SDK and its OpenAPI artifacts, run `./script/generate.ts` from the repository root.
 
 Please try to follow the [style guide](./AGENTS.md)
 

@@ -50,6 +50,10 @@ export function useOpenCodeRestart() {
         }
       : undefined
 
+    try {
+      sessionStorage.setItem("meristem.restarting", "1")
+    } catch {}
+
     setState("restarting")
     try {
       const response = await fetch(new URL("/global/restart", conn.http.url), { method: "POST", headers })
@@ -78,6 +82,9 @@ export function useOpenCodeRestart() {
       throw new Error("Restart timed out")
     } catch (error) {
       console.error("[meristem] failed to restart OpenCode", error)
+      try {
+        sessionStorage.removeItem("meristem.restarting")
+      } catch {}
       setState("failed")
       window.setTimeout(() => {
         setState("idle")

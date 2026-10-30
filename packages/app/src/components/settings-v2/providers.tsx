@@ -4,7 +4,7 @@ import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { showToast } from "@/utils/toast"
 import { popularProviders, useProviders } from "@/hooks/use-providers"
-import { createMemo, type Accessor, type Component, For, Show } from "solid-js"
+import { createMemo, createSignal, type Accessor, type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { useServerProtocol, useServerSDK } from "@/context/server-sdk"
 import { useServerSync } from "@/context/server-sync"
@@ -40,6 +40,7 @@ export const SettingsProvidersV2: Component<{
   const serverSync = useServerSync()
   const providers = useProviders(props.directory)
   const providerConnect = useProviderConnectController({ onBack: props.onBack })
+  const [showAllProviders, setShowAllProviders] = createSignal(false)
 
   const connect = (provider?: string) => {
     providerConnect.select(provider)
@@ -59,6 +60,15 @@ export const SettingsProvidersV2: Component<{
       .filter((p) => !connectedIDs.has(p.id))
       .slice()
     items.sort((a, b) => popularProviders.indexOf(a.id) - popularProviders.indexOf(b.id))
+    return items
+  })
+
+  const other = createMemo(() => {
+    const connectedIDs = new Set(connected().map((p) => p.id))
+    const items = [...providers.all().values()].filter(
+      (p) => !connectedIDs.has(p.id) && !popularProviders.includes(p.id),
+    )
+    items.sort((a, b) => a.name.localeCompare(b.name))
     return items
   })
 
@@ -224,6 +234,37 @@ export const SettingsProvidersV2: Component<{
               )}
             </For>
 
+            <Show when={showAllProviders()}>
+              <For each={other()}>
+                {(item) => (
+                  <div class="settings-v2-provider-row">
+                    <div class="settings-v2-provider-lead">
+                      <ProviderIcon
+                        id={item.id}
+                        width={PROVIDER_ICON_SIZE}
+                        height={PROVIDER_ICON_SIZE}
+                        class="settings-v2-provider-icon shrink-0"
+                      />
+                      <div class="settings-v2-provider-copy">
+                        <div class="settings-v2-provider-main">
+                          <span class="settings-v2-provider-name">{item.name}</span>
+                          <Show when={item.id === "opencode" || item.id === "opencode-go"}>
+                            <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
+                          </Show>
+                        </div>
+                        <Show when={note(item.id)}>
+                          {(key) => <p class="settings-v2-provider-description">{language.t(key())}</p>}
+                        </Show>
+                      </div>
+                    </div>
+                    <ButtonV2 size="normal" variant="neutral" icon="plus" onClick={() => connect(item.id)}>
+                      {language.t("common.connect")}
+                    </ButtonV2>
+                  </div>
+                )}
+              </For>
+            </Show>
+
             <Show when={protocol() === "v1"}>
               <div class="settings-v2-provider-row" data-component="custom-provider-section">
                 <div class="settings-v2-provider-lead">
@@ -257,9 +298,11 @@ export const SettingsProvidersV2: Component<{
             </Show>
           </SettingsListV2>
 
-          <button type="button" class="settings-v2-providers-view-all" onClick={() => connect()}>
-            {language.t("dialog.provider.viewAll")}
-          </button>
+          <Show when={!showAllProviders()}>
+            <button type="button" class="settings-v2-providers-view-all" onClick={() => setShowAllProviders(true)}>
+              {language.t("dialog.provider.viewAll")}
+            </button>
+          </Show>
         </div>
       </div>
     </>

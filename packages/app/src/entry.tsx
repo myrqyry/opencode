@@ -159,6 +159,13 @@ if (root instanceof HTMLElement) {
   void loadInitialLocale().then((locale) => {
     const auth = authFromToken(new URLSearchParams(location.search).get("auth_token"))
     clearAuthToken()
+    try {
+      window.setTimeout(() => {
+        sessionStorage.removeItem("meristem.restarting")
+        const splash = document.getElementById("meristem-restart-splash")
+        if (splash) splash.style.display = "none"
+      }, 400)
+    } catch {}
     const server: ServerConnection.Http = {
       type: "http",
       authToken: !!auth,

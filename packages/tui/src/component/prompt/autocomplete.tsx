@@ -21,7 +21,7 @@ import { Locale } from "../../util/locale"
 import type { PromptInfo } from "../../prompt/history"
 import { useFrecency } from "../../prompt/frecency"
 import { useBindings, useCommandSlashes, useOpencodeModeStack } from "../../keymap"
-import { displayCharAt, mentionTriggerIndex } from "../../prompt/display"
+import { displayCharAt, mentionTriggerIndex, slashTriggerIndex } from "../../prompt/display"
 import type { FileSystemEntry } from "@opencode-ai/sdk/v2"
 
 function removeLineRange(input: string) {
@@ -692,10 +692,11 @@ export function Autocomplete(props: {
         const offset = props.input().cursorOffset
         if (offset === 0) return
 
-        // Check for "/" at position 0 - reopen slash commands
-        if (value.startsWith("/") && !value.slice(0, offset).match(/\s/)) {
+         // Check for "/" trigger - allow slash commands anywhere, like @ mentions
+        const slashIdx = slashTriggerIndex(value, offset)
+        if (slashIdx !== undefined) {
           show("/")
-          setStore("index", 0)
+          setStore("index", slashIdx)
           return
         }
 
